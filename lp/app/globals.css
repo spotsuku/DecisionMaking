@@ -20,7 +20,7 @@
 .quoteCopy blockquote strong{display:block;margin-top:68px;padding-top:38px;border-top:2px solid var(--ink);font-size:clamp(28px,3vw,52px);line-height:1.3}
 
 @media(max-width:800px){
-  .hero h1{font-size:clamp(64px,23vw,108px);margin:38px 0 36px}
+  .hero h1{font-size:clamp(92px,30vw,150px);margin:38px 0 36px}
   .quoteFeature{grid-template-columns:1fr;min-height:auto}
   .quotePortrait{min-height:72svh}
   .quotePortrait figcaption{padding:24px}
@@ -31,14 +31,37 @@
 }
 
 .hero h1{white-space:nowrap}
-.phoneWrap{display:flex;flex-direction:column;align-items:center;gap:16px}
-.phoneIntro{align-self:flex-start;margin-bottom:6px}
-.phoneIntro span{display:block;color:#8d8d8d;font-size:12px;letter-spacing:.02em;margin-bottom:7px}
-.phoneIntro strong{display:block;font-size:22px;letter-spacing:-.02em}
-/* 作り物のベゼルは置かない。実画面をそのまま、角丸と影だけで見せる */
-.shotFrame{width:min(272px,100%);border-radius:30px;overflow:hidden;background:var(--paper);box-shadow:0 34px 80px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.13)}
+.phoneWrap{position:relative;justify-self:center;width:min(360px,100%)}
+.phoneIntro{margin:0 0 20px 4px;display:grid;gap:5px}.phoneIntro span{font-size:11px;color:#aaa;letter-spacing:.08em}.phoneIntro strong{font-size:21px;letter-spacing:-.02em}
+.phoneWrap .phoneMock{width:min(340px,100%);background:linear-gradient(145deg,#4c4c4f,#151517 30%,#29292b);border:3px solid #5d5d60;border-radius:50px;padding:8px;box-shadow:18px 20px 0 var(--red),0 30px 70px #000}
+.phoneWrap .phoneScreen{position:relative;min-height:500px;padding:51px 19px 30px;border-radius:40px;background:linear-gradient(155deg,#f8f6f0,var(--paper));overflow:hidden}
+.phoneWrap .phoneNotch{top:11px;width:92px;height:25px;background:#090909;border-radius:15px;z-index:2}
+.deviceStatus{position:absolute;inset:15px 18px auto;display:flex;justify-content:space-between;font-size:8px;font-weight:800}.deviceStatus i{font-style:normal;letter-spacing:1px}
+.sideButton{position:absolute;left:-7px;width:5px;background:#4b4b4d;border-radius:3px 0 0 3px}.sideButtonTop{top:110px;height:54px}.sideButtonBottom{top:177px;height:78px}
+.homeIndicator{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:92px;height:4px;border-radius:10px;background:#111}
+.jobsFeature{background:#dedbd3}.jobsFeature .quotePortrait img{object-position:50% 28%}.jobsFeature .quoteCopy blockquote span{font-size:clamp(44px,5.2vw,88px)}
+
+/* Section headlines: match the bold Japanese gothic style used in the quote panel. */
+.hero h1,
+.section h2,
+.quoteCopy blockquote strong{
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  font-weight:900;
+  font-feature-settings:"palt" 1;
+}
+
+@media(max-width:800px){.hero h1{font-size:clamp(64px,22vw,96px);white-space:nowrap}.phoneWrap{width:min(325px,calc(100% - 8px));margin:34px auto 0}.phoneIntro{margin-left:0}.phoneWrap .phoneMock{width:100%;margin:0;box-shadow:12px 14px 0 var(--red),0 24px 55px #000}.phoneWrap .phoneScreen{min-height:475px}.jobsFeature .quoteCopy blockquote span{font-size:clamp(40px,11.5vw,54px)}}
+
+.pricingCopy h2{font-size:clamp(34px,6.2vw,94px)}
+.pricingCopy h2 span{display:block;white-space:nowrap}
+.answerGrid button:only-child{grid-column:1/-1}
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+
+/* 実際のアプリ画面。作り物のベゼルは置かず、角丸と影だけで見せる */
+.shotFrame{width:min(300px,100%);margin:0 auto;border-radius:32px;overflow:hidden;background:var(--paper);box-shadow:0 34px 80px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.13)}
 .shotFrame img{display:block;width:100%;height:auto}
-.shotCap{max-width:272px;margin:0;color:#8d8d8d;font-size:12px;line-height:1.75;text-align:center}
+.shotCap{max-width:300px;margin:16px auto 0;color:#8d8d8d;font-size:12px;line-height:1.75;text-align:center}
 .shotRow{display:grid;grid-template-columns:repeat(3,1fr);gap:44px;width:min(940px,100%);margin:85px auto 0;justify-items:center}
 .shotItem{margin:0;display:flex;flex-direction:column;align-items:center}
 .shotItem .shotFrame{width:100%;max-width:240px;border-radius:24px}
@@ -47,10 +70,8 @@
 .priceNext{margin:18px 0 0;color:#9a9a9a;font-size:12.5px;line-height:1.7}
 .priceNext b{color:#fff}
 @media(max-width:800px){
-.phoneWrap{margin-top:34px}
-.shotFrame{width:min(250px,100%);border-radius:26px;box-shadow:0 22px 46px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.13)}
-.shotCap{max-width:250px}
+.shotFrame{width:min(280px,100%);border-radius:28px;box-shadow:0 22px 46px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.13)}
+.shotCap{max-width:280px}
 .shotRow{grid-template-columns:1fr;gap:50px;margin-top:55px}
-.shotItem .shotFrame{max-width:250px}
-.shotItem figcaption{max-width:250px}
+.shotItem .shotFrame,.shotItem figcaption{max-width:260px}
 }
