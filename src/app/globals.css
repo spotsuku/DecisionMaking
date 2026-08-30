@@ -130,6 +130,17 @@ button { font-family: var(--font); }
 }
 .mic-corner.listening { background: var(--accent); }
 
+/* 音声入力つきテキストエリア(診断の各記入欄) */
+.voice-field { position: relative; }
+.voice-field textarea { padding-right: 62px; }
+.voice-mic {
+  position: absolute; right: 10px; bottom: 12px;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--ink); color: #fff; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.voice-mic.listening { background: var(--accent); }
+
 .obs { display: flex; align-items: center; gap: 12px; }
 .obs .body { flex: 1; min-width: 0; }
 .obs .name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }

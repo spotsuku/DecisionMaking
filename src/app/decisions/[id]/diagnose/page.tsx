@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useDecision } from "@/lib/useDecision";
 import { store } from "@/lib/store";
 import {
+  QUESTION_BANK,
   selectNextQuestion,
   assessGaps,
   assessBlockers,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/diagnosis";
 import { BLOCKER_LABEL, GAP_LABEL, READINESS_LABEL, type Readiness } from "@/lib/types";
 import { FramePanel } from "@/components/FramePanel";
+import { VoiceTextarea } from "@/components/VoiceTextarea";
 import { IconBack } from "@/components/icons";
 
 const MAX_QUESTIONS = 7;
@@ -25,7 +27,7 @@ const MAX_QUESTIONS = 7;
 export default function DiagnosePage() {
   const router = useRouter();
   const { db, decision, version } = useDecision();
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [showLog, setShowLog] = useState(false);
 
   const [routing, setRouting] = useState(false);
@@ -54,8 +56,9 @@ export default function DiagnosePage() {
 
   if (!decision || !version) return null;
 
+  // 保存済みの質問も、記入欄の定義は質問バンクから引く
   const current = pendingQuestion
-    ? { code: pendingQuestion.questionCode, text: pendingQuestion.text, purpose: pendingQuestion.purpose, gap: pendingQuestion.gap }
+    ? QUESTION_BANK.find((q) => q.code === pendingQuestion.questionCode) ?? nextDef
     : nextDef;
 
   const answeredCount = answers.length;
@@ -67,8 +70,14 @@ export default function DiagnosePage() {
     .at(-1);
   const safety = classifySafety(decision.domain, answers.map((a) => a.answerText).join(" "));
 
+  const filled = current
+    ? current.parts.filter((part) => (draft[part.key] ?? "").trim() !== "")
+    : [];
+  // 先頭の欄が埋まっていれば次へ進める(任意欄で足止めしない)
+  const canSubmit = !!current && (draft[current.parts[0].key] ?? "").trim() !== "";
+
   const submitAnswer = () => {
-    if (!current || !draft.trim()) return;
+    if (!current || !canSubmit) return;
     const q =
       pendingQuestion ??
       store.recordQuestion(version.id, {
@@ -77,8 +86,17 @@ export default function DiagnosePage() {
         purpose: current.purpose,
         gap: current.gap,
       });
-    store.recordAnswer(q.id, draft.trim());
-    setDraft("");
+    const answerJson: Record<string, string> = {};
+    for (const part of current.parts) {
+      const value = (draft[part.key] ?? "").trim();
+      if (value) answerJson[part.key] = value;
+    }
+    const answerText =
+      current.parts.length > 1
+        ? filled.map((part) => `${part.label}: ${(draft[part.key] ?? "").trim()}`).join("\n")
+        : (draft[current.parts[0].key] ?? "").trim();
+    store.recordAnswer(q.id, answerText, answerJson);
+    setDraft({});
     const fresh = store.getSnapshot();
     const signals = assessBlockers(fresh, version);
     store.saveBlockers(
@@ -134,17 +152,27 @@ export default function DiagnosePage() {
             <span className="card-meta">{current.purpose}</span>
           </div>
           <div className="bigq">{current.text}</div>
-          <textarea
-            rows={6}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="思ったことをそのまま書いてください"
-            style={{ marginTop: 8 }}
-          />
-          <div className="hint" style={{ fontSize: 11.5, color: "var(--ink-faint)", margin: "8px 0 12px" }}>
-            回答は履歴に残り、あとから根拠として参照されます。
+          {current.parts.map((part, i) => (
+            <div className="field" key={part.key} style={{ marginTop: i === 0 ? 12 : 14 }}>
+              {current.parts.length > 1 && (
+                <label>
+                  {part.label}
+                  {part.optional && <span className="card-meta" style={{ marginLeft: 6 }}>任意</span>}
+                </label>
+              )}
+              <VoiceTextarea
+                rows={current.parts.length > 1 ? 3 : 5}
+                autoFocus={i === 0}
+                value={draft[part.key] ?? ""}
+                onChange={(next) => setDraft((d) => ({ ...d, [part.key]: next }))}
+                placeholder={part.placeholder}
+              />
+            </div>
+          ))}
+          <div className="hint" style={{ fontSize: 11.5, color: "var(--ink-faint)", margin: "4px 0 12px" }}>
+            話して入力もできます。回答は履歴に残り、あとから根拠として参照されます。
           </div>
-          <button className="btn primary" onClick={submitAnswer} disabled={!draft.trim()}>
+          <button className="btn primary" onClick={submitAnswer} disabled={!canSubmit}>
             回答を保存して次へ
           </button>
           <button className="btn ghost" style={{ marginTop: 4 }} onClick={() => router.push(`/decisions/${decision.id}`)}>
@@ -247,8 +275,12 @@ export default function DiagnosePage() {
 
       {questions.length > 0 && (
         <>
-          <button className="link-row" style={{ marginTop: 14 }} onClick={() => setShowLog((s) => !s)}>
-            これまでの問答 {answers.length}件 {showLog ? "を閉じる" : "を見る"}
+          <button
+            className="btn outline"
+            style={{ marginTop: 16 }}
+            onClick={() => setShowLog((s) => !s)}
+          >
+            {showLog ? "これまでの問答を閉じる" : `これまでの問答を見る(${answers.length}件)`}
           </button>
           {showLog && (
             <div className="chat">

@@ -220,7 +220,11 @@ class Store {
     return question;
   }
 
-  recordAnswer(questionId: string, answerText: string): DiagnosticAnswer {
+  recordAnswer(
+    questionId: string,
+    answerText: string,
+    answerJson: Record<string, string> = {}
+  ): DiagnosticAnswer {
     this.load();
     const q = this.db.questions.find((x) => x.id === questionId);
     if (!q) throw new Error("question not found");
@@ -230,6 +234,7 @@ class Store {
       versionId: q.versionId,
       questionCode: q.questionCode,
       answerText,
+      answerJson,
       submittedAt: now(),
     };
     this.db.answers.push(answer);

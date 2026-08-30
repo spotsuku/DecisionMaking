@@ -94,7 +94,10 @@ export interface DiagnosticAnswer {
   questionId: string;
   versionId: string;
   questionCode: string;
+  /** 全文(検索・キーワード判定用) */
   answerText: string;
+  /** 記入欄ごとの構造値(設計書3.3 answer_json)。後段の判定はこちらを使う */
+  answerJson: Record<string, string>;
   submittedAt: string;
 }
 

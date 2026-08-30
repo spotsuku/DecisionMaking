@@ -3,24 +3,14 @@
 // 書き出し(ブレインダンプ): 自由記述 or 音声で頭の中を出す。
 // 保存すると、決断が隠れていそうな文を候補として提案する(提案のみ・確定は本人 INV-05)。
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDB, fmtDateTime } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { extractCandidates, candidateTitle, type Candidate } from "@/lib/journal";
+import { useSpeechInput, appendSpeech } from "@/lib/useSpeech";
 import { IconBack, IconMic } from "@/components/icons";
-
-type SpeechRecognitionLike = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((e: { resultIndex: number; results: { length: number; [i: number]: { isFinal: boolean; 0: { transcript: string } } } }) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
 
 export default function JournalPage() {
   const router = useRouter();
@@ -28,51 +18,18 @@ export default function JournalPage() {
   const [text, setText] = useState("");
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [added, setAdded] = useState<Record<string, string>>({}); // candidate -> decisionId
-  const [listening, setListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(true);
-  const recRef = useRef<SpeechRecognitionLike | null>(null);
   const textRef = useRef(text);
   textRef.current = text;
-
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>;
-    if (!w.SpeechRecognition && !w.webkitSpeechRecognition) setSpeechSupported(false);
-    return () => recRef.current?.stop();
-  }, []);
-
-  const toggleMic = () => {
-    if (listening) {
-      recRef.current?.stop();
-      setListening(false);
-      return;
-    }
-    const w = window as unknown as Record<string, unknown>;
-    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as (new () => SpeechRecognitionLike) | undefined;
-    if (!SR) return;
-    const rec = new SR();
-    rec.lang = "ja-JP";
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.onresult = (e) => {
-      let addedText = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) addedText += e.results[i][0].transcript;
-      }
-      if (addedText) {
-        const base = textRef.current;
-        setText(base + (base && !base.endsWith("\n") ? "\n" : "") + addedText + "。");
-      }
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    recRef.current = rec;
-    rec.start();
-    setListening(true);
-  };
+  const {
+    listening,
+    supported: speechSupported,
+    toggle: toggleMic,
+    stop: stopMic,
+  } = useSpeechInput((spoken) => setText(appendSpeech(textRef.current, spoken)));
 
   const save = () => {
     if (!text.trim()) return;
-    recRef.current?.stop();
+    stopMic();
     store.addJournalEntry(text.trim());
     setCandidates(extractCandidates(text));
   };

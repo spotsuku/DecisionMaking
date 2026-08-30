@@ -14,11 +14,25 @@ export const ALGORITHM_VERSION = "rule-1.0.0";
 
 // ---------------------------------------------------------------- 質問バンク
 
+/**
+ * 記入欄。1つの問いに複数の論点が含まれる場合は欄を分ける。
+ * 1欄=1データにしないと、後段(基準・停止条件・損失上限など)で使えない。
+ */
+export interface QuestionPart {
+  key: string;
+  label: string;
+  placeholder?: string;
+  /** 空欄のまま次へ進めるか */
+  optional?: boolean;
+}
+
 export interface QuestionDef {
   code: string;
   gap: GapCode;
+  /** 画面の見出しになる問いかけ */
   text: string;
   purpose: string;
+  parts: QuestionPart[];
   /** 未確定の必須フィールドに対応するか */
   requiredField: boolean;
   emotionalLoad: number; // 0-2
@@ -28,40 +42,57 @@ export const QUESTION_BANK: QuestionDef[] = [
   {
     code: "Q_FRAME_SENTENCE",
     gap: "QUESTION",
-    text: "いま考えていることは、何を決める話ですか? 一文にしてみてください。",
+    text: "いま考えていることは、何を決める話ですか?",
     purpose: "何を決めるかを一文で確定する",
+    parts: [{ key: "question", label: "決めること", placeholder: "例: 犬を家に迎えるかどうか" }],
     requiredField: true,
     emotionalLoad: 0,
   },
   {
     code: "Q_OWNER",
     gap: "AGENCY",
-    text: "この件を最終的に決めるのは誰ですか? あなたが決められる範囲はどこまでですか?",
+    text: "この件は、誰が決めますか?",
     purpose: "決定権と責任範囲を確定する",
+    parts: [
+      { key: "owner", label: "最終的に決める人", placeholder: "例: 自分 / 妻と相談 / 決裁は役員" },
+      { key: "scope", label: "あなたが決められる範囲", placeholder: "例: 予算50万円まではこちらで決められる" },
+    ],
     requiredField: true,
     emotionalLoad: 1,
   },
   {
     code: "Q_DEADLINE",
     gap: "QUESTION",
-    text: "いつまでに決めますか? その日を過ぎると何が起きますか?",
-    purpose: "決断期限を確定する",
+    text: "いつまでに決めますか?",
+    purpose: "決断期限と、超過したときに起きることを確定する",
+    parts: [
+      { key: "due", label: "決める期限", placeholder: "例: 今週の金曜まで" },
+      { key: "consequence", label: "その日を過ぎると何が起きるか", placeholder: "例: 契約が自動更新される" },
+    ],
     requiredField: true,
     emotionalLoad: 0,
   },
   {
     code: "Q_CRITERIA",
     gap: "VALUE",
-    text: "この選択で「何を守り、何を諦めても良い」ですか? 比較の物差しを2〜3個挙げてください。",
+    text: "この選択で、何を守り、何を諦めますか?",
     purpose: "判断基準とトレードオフを言語化する",
+    parts: [
+      { key: "protect", label: "守りたいもの", placeholder: "例: 家族との時間" },
+      { key: "giveup", label: "諦めてもいいもの", placeholder: "例: 年収の上積み" },
+    ],
     requiredField: true,
     emotionalLoad: 1,
   },
   {
     code: "Q_INFO_STOP",
     gap: "RECOGNITION",
-    text: "何が分かれば評価が変わりますか? 逆に、それ以上調べても変わらない条件は何ですか?",
+    text: "何が分かれば、判断が変わりますか?",
     purpose: "不足情報と情報収集の停止条件を定義する",
+    parts: [
+      { key: "missing", label: "分かれば評価が変わること", placeholder: "例: 世話にかかる実際の時間" },
+      { key: "stop", label: "これ以上調べても変わらない条件", placeholder: "例: 見学2件まで。それ以上は調べない" },
+    ],
     requiredField: true,
     emotionalLoad: 0,
   },
@@ -70,22 +101,33 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "EXECUTION",
     text: "24時間以内にできる、外部世界に向けた最小の行動は何ですか?",
     purpose: "選択を実行意図へ変換する",
+    parts: [
+      { key: "action", label: "最小の行動", placeholder: "例: ブリーダーに見学を申し込む" },
+    ],
     requiredField: true,
     emotionalLoad: 0,
   },
   {
     code: "Q_WORST_CASE",
     gap: "RECOGNITION",
-    text: "選んだ案がうまくいかないとしたら、どんな筋道で失敗しますか? 引き受けられる損失はどこまでですか?",
+    text: "選んだ案がうまくいかないとしたら?",
     purpose: "ネガティブ予測と損失上限を先に言語化する",
+    parts: [
+      { key: "path", label: "失敗する筋道", placeholder: "例: 世話が続かず家族に負担が偏る" },
+      { key: "loss", label: "引き受けられる損失の上限", placeholder: "例: 月3万円と、平日の朝夕30分まで" },
+    ],
     requiredField: false,
     emotionalLoad: 2,
   },
   {
     code: "Q_FEELING",
     gap: "RECOGNITION",
-    text: "この件を考えるとき、どんな気持ちになりますか? 考えるのを中断したくなる瞬間はありますか?",
+    text: "この件を考えるとき、どんな気持ちになりますか?",
     purpose: "感情と情報を分けて扱う",
+    parts: [
+      { key: "feeling", label: "浮かぶ気持ち", placeholder: "例: 楽しみだけど、責任が怖い" },
+      { key: "interrupt", label: "考えるのを中断したくなる瞬間", placeholder: "なければ空欄で大丈夫です", optional: true },
+    ],
     requiredField: false,
     emotionalLoad: 2,
   },

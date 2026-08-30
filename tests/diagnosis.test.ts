@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  QUESTION_BANK,
   routeReadiness,
   classifySafety,
   detectGatheringEscape,
@@ -111,7 +112,7 @@ describe("次質問の選択(4.5)", () => {
     });
     db.answers.push({
       id: "a1", questionId: "q1", versionId: v.id, questionCode: "Q_FRAME_SENTENCE",
-      answerText: "AかBか", submittedAt: new Date().toISOString(),
+      answerText: "AかBか", answerJson: { question: "AかBか" }, submittedAt: new Date().toISOString(),
     });
     const q = selectNextQuestion(db, v, null);
     expect(q?.code).not.toBe("Q_FRAME_SENTENCE");
@@ -128,5 +129,27 @@ describe("次質問の選択(4.5)", () => {
       });
     }
     expect(selectNextQuestion(db, v, null)).toBeNull();
+  });
+});
+
+describe("質問の記入欄(データとして分ける)", () => {
+  it("複合質問は欄が分かれている(不足情報と停止条件は別データ)", () => {
+    const q = QUESTION_BANK.find((x) => x.code === "Q_INFO_STOP")!;
+    expect(q.parts.map((p) => p.key)).toEqual(["missing", "stop"]);
+  });
+
+  it("決定者と権限範囲、期限と超過時の影響も別データ", () => {
+    expect(QUESTION_BANK.find((x) => x.code === "Q_OWNER")!.parts).toHaveLength(2);
+    expect(QUESTION_BANK.find((x) => x.code === "Q_DEADLINE")!.parts).toHaveLength(2);
+    expect(QUESTION_BANK.find((x) => x.code === "Q_WORST_CASE")!.parts.map((p) => p.key))
+      .toEqual(["path", "loss"]);
+  });
+
+  it("すべての質問が1つ以上の記入欄を持ち、keyは質問内で一意", () => {
+    for (const q of QUESTION_BANK) {
+      expect(q.parts.length).toBeGreaterThan(0);
+      expect(new Set(q.parts.map((p) => p.key)).size).toBe(q.parts.length);
+      expect(q.parts[0].optional).not.toBe(true); // 先頭欄は必須
+    }
   });
 });
