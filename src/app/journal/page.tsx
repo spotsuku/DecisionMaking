@@ -32,7 +32,7 @@ export default function JournalPage() {
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
   const [added, setAdded] = useState<Record<string, string>>({});
-  // 「決めてみますか」を断られたときの候補数。粘らないために覚えておく
+  // 「決めてみますか」を断られたときの発言数。粘らないために覚えておく
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const savedRef = useRef<string | null>(null);
@@ -103,6 +103,7 @@ export default function JournalPage() {
 
   // ルールとAIの両方から集めた候補(重複はassist側で除いてある)
   const candidates = extra.length > 0 ? extra : state.candidates.map((c) => ({ ...c, source: "RULE" as const }));
+  const saidCount = state.turns.filter((t) => t.from === "USER").length;
   const questions = candidates.filter((c) => c.kind === "QUESTION");
   const signals = candidates.filter((c) => c.kind === "SIGNAL");
 
@@ -141,7 +142,7 @@ export default function JournalPage() {
       </button>
       <div ref={endRef} />
 
-      {shouldInvite(candidates.length, dismissedAt) && (
+      {shouldInvite(state, dismissedAt) && (
         <div className="invite">
           <div className="it">決めていないことが{candidates.length}つ出てきました。</div>
           <div className="id">
@@ -151,13 +152,13 @@ export default function JournalPage() {
             <button
               className="btn primary half"
               onClick={() => {
-                setDismissedAt(candidates.length);
+                setDismissedAt(saidCount);
                 listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             >
               決めるものを選ぶ
             </button>
-            <button className="btn half" onClick={() => setDismissedAt(candidates.length)}>
+            <button className="btn half" onClick={() => setDismissedAt(saidCount)}>
               もう少し話す
             </button>
           </div>

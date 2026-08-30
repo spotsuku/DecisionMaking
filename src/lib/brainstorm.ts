@@ -14,6 +14,7 @@
 // 変わらない線引き: 答えを出さない。助言もしない。決めるのは本人(6.1 / INV-05)。
 
 import { extractCandidates, type Candidate } from "./journal";
+import { isNonAnswer } from "./diagnosis";
 
 export interface Turn {
   from: "USER" | "APP";
@@ -26,9 +27,11 @@ export interface BrainstormState {
   candidates: Candidate[];
   /** すでに聞いた問いのキー。同じことは二度聞かない */
   asked: string[];
+  /** 本人が話すたびの候補数。新しい決めごとが出なくなったかを見る */
+  counts: number[];
 }
 
-export const emptyBrainstorm = (): BrainstormState => ({ turns: [], candidates: [], asked: [] });
+export const emptyBrainstorm = (): BrainstormState => ({ turns: [], candidates: [], asked: [], counts: [] });
 
 /** 会話全体の本文(候補の抽出はここに対して行う) */
 export function transcript(state: BrainstormState): string {
@@ -132,7 +135,8 @@ export function addUserTurn(state: BrainstormState, said: string): BrainstormSta
   const text = said.trim();
   if (!text) return state;
   const next: BrainstormState = { ...state, turns: [...state.turns, { from: "USER", text }] };
-  return { ...next, candidates: refreshCandidates(next) };
+  const candidates = refreshCandidates(next);
+  return { ...next, candidates, counts: [...state.counts, candidates.length] };
 }
 
 /** アプリの発言を足す。キーを渡すと「聞いた」として記録する */
@@ -149,22 +153,45 @@ export function readyToDecide(state: BrainstormState): boolean {
   return state.candidates.length > 0 && userTurns(state) >= 2;
 }
 
+/** 直前の発言 */
+function lastSaid(state: BrainstormState): string {
+  return [...state.turns].reverse().find((t) => t.from === "USER")?.text ?? "";
+}
+
+/** 直近 n 往復で、新しい決めごとが1つも出ていないか */
+function noNewCandidates(state: BrainstormState, n: number): boolean {
+  const c = state.counts;
+  if (c.length <= n) return false;
+  return c[c.length - 1] === c[c.length - 1 - n];
+}
+
+/** 誘う前に、最低これだけは話してもらう */
+const MIN_TURNS = 3;
+/** 一度断られたら、これだけ往復するまで黙る */
+const QUIET_TURNS = 3;
+
 /**
  * 決めてみないかと誘うか。
  *
+ * 件数では決めない。「何個たまったら」は本人の実感と関係がないため。
+ * 見るのは、出す流れが自然に落ち着いたかどうか:
+ *   - 「特にない」で止まった  … 出しきったサイン
+ *   - 新しい決めごとが2往復出ていない … 出す流れが終わったサイン
+ *
  * 会話の中では誘わない ── AIが「そろそろ決めませんか」と言い出すと、
  * 話を聞く役から誘導する役に変わってしまう。会話とは別のカードとして出す。
+ * 断られたらしばらく黙る。決めるかどうかは本人が決めること(INV-05)。
  *
- * 一度断られたら黙る。さらに2件増えて状況が変わったときだけ、もう一度だけ出す。
- * 決めるかどうかは本人が決めることなので、粘らない(INV-05)。
- *
- * @param candidates  いま見えている候補の数
- * @param dismissedAt 断られたときの候補数。まだ断られていなければ null
+ * @param dismissedAtTurn 断られたときの発言数。まだ断られていなければ null
  */
-export function shouldInvite(candidates: number, dismissedAt: number | null): boolean {
-  if (candidates < 2) return false;
-  if (dismissedAt === null) return true;
-  return candidates >= dismissedAt + 2;
+export function shouldInvite(state: BrainstormState, dismissedAtTurn: number | null): boolean {
+  const said = userTurns(state);
+  if (state.candidates.length === 0) return false;
+  if (said < MIN_TURNS) return false;
+  if (dismissedAtTurn !== null && said < dismissedAtTurn + QUIET_TURNS) return false;
+
+  if (isNonAnswer(lastSaid(state))) return true;
+  return noNewCandidates(state, 2);
 }
 
 /**

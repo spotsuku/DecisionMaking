@@ -135,20 +135,60 @@ describe("問いが話題を奪わない", () => {
 });
 
 describe("決めてみないかと誘うタイミング", () => {
-  it("候補が2つ出たら誘う", () => {
-    expect(shouldInvite(0, null)).toBe(false);
-    expect(shouldInvite(1, null)).toBe(false);
-    expect(shouldInvite(2, null)).toBe(true);
+  /** 会話を組み立てる。件数ではなく流れで判断していることを確かめる */
+  function talk(...said: string[]): BrainstormState {
+    let s = emptyBrainstorm();
+    for (const t of said) {
+      s = addUserTurn(s, t);
+      s = addAppTurn(s, "はい。", undefined);
+    }
+    return s;
+  }
+
+  it("話し始めたばかりでは誘わない", () => {
+    expect(shouldInvite(talk("犬を飼うか迷ってる"), null)).toBe(false);
+    expect(shouldInvite(talk("犬を飼うか迷ってる", "世話が心配"), null)).toBe(false);
   });
 
-  it("一度断られたら黙る(粘らない)", () => {
-    expect(shouldInvite(2, 2)).toBe(false);
-    expect(shouldInvite(3, 2)).toBe(false);
+  it("決めごとが1つも見えていなければ誘わない", () => {
+    expect(shouldInvite(talk("疲れた", "よく寝ていない", "特にない"), null)).toBe(false);
   });
 
-  it("さらに2件増えて状況が変われば、もう一度だけ誘う", () => {
-    expect(shouldInvite(4, 2)).toBe(true);
-    expect(shouldInvite(5, 4)).toBe(false);
-    expect(shouldInvite(6, 4)).toBe(true);
+  it("受入テスト: 「特にない」で止まったら誘う(出しきったサイン)", () => {
+    const s = talk("犬を飼うかどうか迷ってる", "世話は妻に頼ることになりそう", "特にない");
+    expect(shouldInvite(s, null)).toBe(true);
+  });
+
+  it("受入テスト: 新しい決めごとが2往復出なければ誘う(流れが終わったサイン)", () => {
+    const s = talk("犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話した");
+    expect(s.candidates).toHaveLength(1);
+    expect(shouldInvite(s, null)).toBe(true);
+  });
+
+  it("まだ新しい決めごとが出ている間は誘わない(話を遮らない)", () => {
+    const s = talk("犬を飼うかどうか迷ってる", "転職するかどうかも決めきれない", "実家の帰省もまだ決めてない");
+    expect(s.candidates.length).toBeGreaterThan(1);
+    expect(shouldInvite(s, null)).toBe(false);
+  });
+
+  it("件数では決めない(2件あっても、まだ出ている最中なら誘わない)", () => {
+    const s = talk("犬を飼うかどうか迷う", "転職するかどうかも迷う");
+    expect(s.candidates).toHaveLength(2);
+    expect(shouldInvite(s, null)).toBe(false);
+  });
+
+  it("一度断られたら、しばらく黙る", () => {
+    const s = talk("犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話した");
+    expect(shouldInvite(s, 3)).toBe(false);
+    const more = addAppTurn(addUserTurn(addAppTurn(addUserTurn(s, "まだ考え中"), "はい。"), "他にもある"), "はい。");
+    expect(shouldInvite(more, 3)).toBe(false);
+  });
+
+  it("黙る期間が過ぎて、また落ち着いたら誘う", () => {
+    let s = talk("犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話した");
+    for (const t of ["まだ考え中", "うーん", "特にない"]) {
+      s = addAppTurn(addUserTurn(s, t), "はい。");
+    }
+    expect(shouldInvite(s, 3)).toBe(true);
   });
 });
