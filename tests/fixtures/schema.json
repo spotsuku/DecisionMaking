@@ -1,0 +1,21 @@
+{
+  "action_events": "id,user_id,action_id,event_type,note,occurred_at",
+  "actions": "id,user_id,decision_id,version_id,text,action_role,status,due_at,created_at,option_id,completion_evidence",
+  "audit_events": "id,user_id,entity_type,entity_id,event_type,detail,occurred_at",
+  "blocker_assessments": "id,user_id,version_id,blocker_code,score,confidence,evidence_refs,counter_question,algorithm_version,created_at",
+  "commitments": "id,user_id,version_id,accepted_tradeoff,accepted_downside_forecast_id,loss_limit,stop_condition,review_at,user_confirmed_at",
+  "criteria": "id,user_id,version_id,label,weight,created_at,definition,minimum_threshold",
+  "decision_changes": "id,user_id,decision_id,from_version_id,to_version_id,trigger,new_evidence,prior_result_acknowledged,changed_assumption,changed_at",
+  "decision_versions": "id,user_id,decision_id,version_no,question,owner_role,authority_scope,selected_option_id,rationale,confidence,state,committed_at,created_at",
+  "decisions": "id,user_id,title,domain,status,current_version_no,due_at,review_at,risk_level,hidden,closed_at,created_at,updated_at,close_kind,close_reason,close_protected,close_learning",
+  "diagnostic_answers": "id,user_id,version_id,question_id,question_code,answer_text,answer_json,raw_text,skipped,mode,submitted_at",
+  "diagnostic_questions": "id,user_id,version_id,question_code,text,purpose,gap,sequence_no",
+  "evidence_items": "id,user_id,version_id,type,statement,source_url,reliability,observed_at",
+  "forecasts": "id,user_id,version_id,forecast_type,outcome_statement,probability,horizon_at,loss_limit,metric,assumption,leading_indicator,frozen_at",
+  "journal_entries": "id,user_id,body,created_at",
+  "option_scores": "id,user_id,option_id,criterion_id,score,uncertainty,rationale",
+  "options": "id,user_id,version_id,label,description,origin,active,added_reason,rejected_reason,created_at",
+  "outcomes": "id,user_id,version_id,observed_at,result_summary,outcome_class,attribution,external_factors",
+  "readiness_checks": "id,user_id,version_id,verdict,missing,stop_condition,note,created_at",
+  "reflections": "id,user_id,version_id,learning,outcome_id,prediction_gap,decision_error,execution_error,environment_change,authored_at"
+}

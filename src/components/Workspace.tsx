@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useDB } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { detectGatheringEscape, detectOptionExpansion } from "@/lib/diagnosis";
+import { buildProposals, type Proposal } from "@/lib/proposals";
 import type { Decision, DecisionVersion, EvidenceItem } from "@/lib/types";
 
 export function Workspace({ decision, version }: { decision: Decision; version: DecisionVersion }) {
@@ -38,6 +39,32 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
   const [eStatement, setEStatement] = useState("");
   const [eReliability, setEReliability] = useState<EvidenceItem["reliability"]>("MEDIUM");
 
+  // 診断で本人が話した内容から、材料の下書きを出す。空欄の前で止まらないように
+  const proposals = locked ? [] : buildProposals(db, version);
+  const acceptProposal = (p: Proposal) =>
+    guard(() => {
+      if (p.kind === "CRITERION") store.addCriterion(version.id, p.label, "", 3, "");
+      else if (p.kind === "OPTION") store.addOption(version.id, p.label, "", "診断の回答から");
+      else store.addEvidence(version.id, p.evidenceType ?? "HYPOTHESIS", p.label, "MEDIUM", null);
+    });
+
+  const Proposals = ({ kind }: { kind: Proposal["kind"] }) => {
+    const items = proposals.filter((p) => p.kind === kind);
+    if (items.length === 0) return null;
+    return (
+      <div className="proposals">
+        <div className="ph">診断で話したことから ── 押すと追加できます</div>
+        {items.map((p) => (
+          <button key={p.label} className="prop" onClick={() => acceptProposal(p)}>
+            <span className="pt">{p.label}</span>
+            <span className="ps">{p.source}</span>
+            <span className="pa">＋</span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   const guard = (fn: () => void) => {
     setErr(null);
     try {
@@ -57,7 +84,11 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
       {err && <div className="callout">{err}</div>}
 
       <h2 className="section">判断基準(3〜5個)</h2>
-      <p className="card-meta" style={{ marginTop: -6 }}>何を守り、何を諦めるか。比較の物差しを先に決めます。</p>
+      <p className="card-meta" style={{ marginTop: -6, lineHeight: 1.8 }}>
+        どの案を選ぶかを比べるための、ものさしです。「何を守りたいか」「何なら諦められるか」を
+        一言にしたものが、そのままものさしになります。3つあれば十分です。
+      </p>
+      <Proposals kind="CRITERION" />
       {criteria.map((c) => (
         <div key={c.id} className="card flat">
           <div className="card-row">
@@ -77,7 +108,7 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
           <div className="form-grid">
             <div className="field">
               <label>基準名<span className="req">*</span></label>
-              <input type="text" value={cLabel} onChange={(e) => setCLabel(e.target.value)} placeholder="例: 月間コスト" />
+              <input type="text" value={cLabel} onChange={(e) => setCLabel(e.target.value)} placeholder="例: 家族との時間" />
             </div>
             <div className="field">
               <label>重み(1-5)</label>
@@ -87,11 +118,11 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
           <div className="form-grid">
             <div className="field">
               <label>定義</label>
-              <input type="text" value={cDef} onChange={(e) => setCDef(e.target.value)} placeholder="どう測るか" />
+              <input type="text" value={cDef} onChange={(e) => setCDef(e.target.value)} placeholder="どう見るか" />
             </div>
             <div className="field">
               <label>最低条件</label>
-              <input type="text" value={cMin} onChange={(e) => setCMin(e.target.value)} placeholder="これを下回る案は却下" />
+              <input type="text" value={cMin} onChange={(e) => setCMin(e.target.value)} placeholder="ここを割ったら選ばない" />
             </div>
           </div>
           <button className="btn small" disabled={!cLabel.trim()}
@@ -102,6 +133,11 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
       )}
 
       <h2 className="section">選択肢(2〜4個)</h2>
+      <p className="card-meta" style={{ marginTop: -6, lineHeight: 1.8 }}>
+        実際に選べる案を並べます。「やる / 見送る」の2つでも立派な選択肢です。
+        比べる相手がないと、決めたことにならないので、最低2つ置きます。
+      </p>
+      <Proposals kind="OPTION" />
       {activeOptions.length >= 5 && (
         <div className="callout">選択肢が5件以上あります。基準で比較し、絞り込みましょう。</div>
       )}
@@ -131,7 +167,7 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
           <div className="form-grid">
             <div className="field">
               <label>選択肢<span className="req">*</span></label>
-              <input type="text" value={oLabel} onChange={(e) => setOLabel(e.target.value)} placeholder="例: 紹介採用へ集中する" />
+              <input type="text" value={oLabel} onChange={(e) => setOLabel(e.target.value)} placeholder="例: 迎える / 見送る" />
             </div>
             <div className="field">
               <label>説明</label>
@@ -206,6 +242,11 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
       )}
 
       <h2 className="section">証拠(事実・仮説・意見を分ける)</h2>
+      <p className="card-meta" style={{ marginTop: -6, lineHeight: 1.8 }}>
+        判断のもとにしている材料を、確かめた事実・まだ確かめていない仮説・誰かの意見に分けて置きます。
+        分けておくと、あとで結果を振り返るときに「何を勘違いしていたか」が分かります。
+      </p>
+      <Proposals kind="EVIDENCE" />
       {evidence.map((e) => (
         <div key={e.id} className="card flat">
           <div className="card-row">
@@ -240,7 +281,7 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
           <div className="field">
             <label>内容<span className="req">*</span></label>
             <input type="text" value={eStatement} onChange={(e) => setEStatement(e.target.value)}
-              placeholder="例: 昨年の媒体経由応募は月12件(ATS実績)" />
+              placeholder="例: 月の費用は3万円と分かった" />
           </div>
           <button className="btn small" disabled={!eStatement.trim()}
             onClick={() => guard(() => { store.addEvidence(version.id, eType, eStatement.trim(), eReliability, null); setEStatement(""); })}>

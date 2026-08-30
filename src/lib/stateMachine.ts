@@ -92,7 +92,7 @@ export function evaluateCommitGate(input: CommitInput): CommitGateResult {
     (a) => a.actionRole === "ADVANCE" && a.text.trim() !== "" && a.dueAt
   );
   if (advance.length === 0) {
-    failures.push({ code: "ACTION", message: "外部世界への最小行動(ADVANCE)と期限が必要です。" });
+    failures.push({ code: "ACTION", message: "決めたあとに動く、いちばん小さな一歩と、その期限が必要です。" });
   }
   if (!input.reviewAt) {
     failures.push({ code: "REVIEW_AT", message: "予測と実績を比較するレビュー日が必要です。" });

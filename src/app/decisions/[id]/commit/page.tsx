@@ -272,7 +272,7 @@ export default function CommitWizardPage() {
         <>
           <p className="card-meta" style={{ margin: "0 0 12px" }}>頭の中の作業ではなく、外部に痕跡が残る行動。原則24時間以内。</p>
           <div className="field">
-            <label>外部世界への最初の一歩<span className="req">*</span></label>
+            <label>いちばん小さな一歩<span className="req">*</span></label>
             <input type="text" value={actionText} onChange={(e) => setActionText(e.target.value)} placeholder="例: 社員3名に紹介依頼のメッセージを送る" />
           </div>
           <div className="field">

@@ -147,11 +147,14 @@ export const QUESTION_BANK: QuestionDef[] = [
   {
     code: "Q_ACTION_24H",
     gap: "EXECUTION",
-    text: "24時間以内にできる、外部世界に向けた最小の行動は何ですか?",
-    purpose: "選択を実行意図へ変換する",
-    rephrase: "大きく動かなくて大丈夫です。誰かに一言送る、日程を1つ押さえる、くらいなら何ができますか?",
+    text: "明日までにできる、いちばん小さな一歩は何ですか?",
+    purpose: "決めたことを、実際に動く一手にする",
+    rephrase: "大きなことでなくて大丈夫です。誰かに連絡する、予定を1つ入れる、資料を1つ見る。それくらいで何ができますか?",
     parts: [
-      { key: "action", label: "最小の行動", placeholder: "例: ブリーダーに見学を申し込む" },
+      {
+        key: "action", label: "いちばん小さな一歩",
+        placeholder: "例: ブリーダーに見学の連絡をする / 妻に相談の時間をもらう",
+      },
     ],
     requiredField: true,
     emotionalLoad: 0,
