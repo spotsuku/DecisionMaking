@@ -49,8 +49,16 @@ export default function JournalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 新しい返事が画面の下に隠れたときだけ、下へ送る。
+  // 常に scrollIntoView すると、すでに下にいる人を上へ引き戻してしまう。
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const el = endRef.current;
+    if (!el) return;
+    const TABBAR = 88; // 固定タブバーの分だけ、見えていないものとして扱う
+    const bottom = el.getBoundingClientRect().bottom;
+    if (bottom > window.innerHeight - TABBAR) {
+      el.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [state.turns.length, thinking]);
 
   const send = async (said: string) => {
@@ -104,7 +112,6 @@ export default function JournalPage() {
           )
         )}
         {thinking && <div className="bubble q note">…</div>}
-        <div ref={endRef} />
       </div>
 
       <VoiceTextarea
@@ -121,6 +128,7 @@ export default function JournalPage() {
       >
         {thinking ? "聞いています…" : "話す"}
       </button>
+      <div ref={endRef} />
 
       {candidates.length > 0 && (
         <div className="sheet" style={{ marginTop: 16 }}>
