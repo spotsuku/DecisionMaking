@@ -122,3 +122,17 @@ describe("助言をしない(役割の線引き)", () => {
     }
   });
 });
+
+describe("問いが話題を奪わない", () => {
+  it("領域(仕事・家庭など)を決めつける問いを出さない", () => {
+    // 本人が言っていない前提を置くと、考えている最中の話題から引き剥がしてしまう
+    const presumes = /仕事以外|プライベート|家庭では|職場では/;
+    let s = emptyBrainstorm();
+    for (let i = 0; i < 12; i++) {
+      const p = nextPrompt(s);
+      if (!p) break;
+      expect(p.text, p.text).not.toMatch(presumes);
+      s = addAppTurn(addUserTurn(s, `答え${i}`), p.text, p.key);
+    }
+  });
+});
