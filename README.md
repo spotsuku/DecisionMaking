@@ -4,7 +4,8 @@
 単発の相談回答ではなく、決断の履歴から本人固有の判断・逃避・修正パターンを学習する。
 
 設計書『意思決定支援アプリ設計書 v1.1(Database × Decision Support Algorithm)』の実装。
-デザインは白黒ベース・差し色赤。
+
+**モバイルファーストUI(案A「墨と紙」)**: 白黒赤を維持しつつ、赤は警告(Drift・期限超過・ネガティブ予測)とブランド記号だけに使う。アクションは墨色のピルボタン、面は生成り。下部タブバー+中央の書き出しボタン。
 
 ## 設計原則
 
@@ -37,13 +38,20 @@ src/
     stateMachine.ts  状態機械(2.3)・決断成立ルール(4.6)・準備度4段階(4.8)
     diagnosis.ts     二層診断(4.2)・次質問選択(4.5)・判断可能性ルーター(4.3)・S0 Safety(6.4)
     drift.ts         Decision Drift(5.1)・選択的帰属(5.3)・Decision Integrity(5.4)
+    journal.ts       ジャーナリング(書き出し)と決断候補のルールベース抽出
+    observations.ts  「決めずに置いていること」フィード(放置・停滞・ずれ・レビュー待ち)
     store.ts         append-onlyストア(Commitトランザクション 7.1・変更プロトコル 5.2)
   app/
-    page.tsx               Home: 未決の発見(期限・保留日数・次の一歩・レビュー待ち)
-    decisions/new/         New Decision: 問い・主体・期限・領域(S1 Frame)
-    decisions/[id]/        診断/材料/確定/カード/実行/レビュー/履歴
+    page.tsx               Home: 書き出しファースト(ジャーナリング入口・気づきフィード・今日の一歩)
+    journal/               書き出し: 自由記述+音声入力(Web Speech API)→ 決断候補の提案
+    decisions/             一覧 / new: 直接登録(S1 Frame)
+    decisions/[id]/        決断ハブ(ハブ&スポーク)
+      diagnose/            診断(一問一画面)+ 判断可能性ルーター
+      materials/           基準・選択肢・証拠
+      commit/              Commitウィザード(選択→両面予測→引受→行動→確定)
+      card/ actions/ review/ history/
     identity/              長期パターン(Integrity・帰属記録・行動立ち上がり)
-tests/                     状態遷移テスト+受入テスト(10.3)
+tests/                     状態遷移テスト+受入テスト(10.3)+候補抽出テスト
 supabase/migrations/       本番用DDL・不変トリガー・commit_decision関数・RLS
 schemas/                   LLM Structured Outputs用JSON Schema(6.2)
 ```

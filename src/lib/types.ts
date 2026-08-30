@@ -244,8 +244,15 @@ export interface AuditEvent {
   createdAt: string;
 }
 
+export interface JournalEntry {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
 /** 全データ。localStorage に保存する MVP モック用の器(正本は履歴テーブル群) */
 export interface DB {
+  journal: JournalEntry[];
   decisions: Decision[];
   versions: DecisionVersion[];
   questions: DiagnosticQuestion[];
@@ -267,6 +274,7 @@ export interface DB {
 }
 
 export const emptyDB = (): DB => ({
+  journal: [],
   decisions: [],
   versions: [],
   questions: [],

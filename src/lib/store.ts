@@ -592,6 +592,28 @@ class Store {
     this.persist();
   }
 
+  // ------------------------------------------------------------ ジャーナリング
+
+  addJournalEntry(text: string) {
+    this.load();
+    const entry = { id: uid(), text, createdAt: now() };
+    this.db.journal.push(entry);
+    this.audit("journal", entry.id, "CREATED");
+    this.persist();
+    return entry;
+  }
+
+  /** 書き出しの候補文から決断(DRAFT)を作る。候補は提案であり、この操作自体が本人の選択。 */
+  createDecisionFromCandidate(candidate: string, title: string) {
+    return this.createDecision({
+      title,
+      question: candidate,
+      ownerRole: "",
+      domain: "OTHER",
+      dueAt: null,
+    });
+  }
+
   // ------------------------------------------------------------ エクスポート(3.8)
 
   exportJSON(): string {

@@ -1,27 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Nav } from "@/components/Nav";
+import { TabBar } from "@/components/TabBar";
 
 export const metadata: Metadata = {
   title: "DECISION MAKING",
   description:
-    "自分の人生と仕事を自分で決め、最小の行動を起こし、結果とのズレから学ぶ力を鍛えるアプリ",
+    "決められないこと、迷っていることを書き出して、決断・行動・振り返りを成立させるアプリ",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#fffefd",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
       <body>
-        <header className="topbar">
-          <div className="topbar-inner">
-            <a href="/" className="brand">
-              <span className="brand-mark" />
-              DECISION MAKING
-            </a>
-            <Nav />
-          </div>
-        </header>
         <main className="shell">{children}</main>
+        <TabBar />
       </body>
     </html>
   );
