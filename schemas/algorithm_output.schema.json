@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://decision-making.app/schemas/algorithm_output.schema.json",
+  "title": "AlgorithmOutput",
+  "description": "LLM Structured Outputs 用スキーマ(設計書 6.2)。LLMは候補を提案するだけで、業務状態はアプリの決定的ルールだけが更新する(2.2/6.1)。根拠IDのない心理推定は保存・表示しない(6.3)。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stage", "blockers", "next_question", "safety"],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "enum": ["SAFETY", "FRAME", "READINESS", "DIAGNOSE", "CRITERIA", "OPTIONS", "EVIDENCE", "COMMIT", "ACT", "REVIEW", "REVISE"],
+      "description": "ステージ別処理(4.4)のどの段階の出力か"
+    },
+    "blockers": {
+      "type": "array",
+      "maxItems": 2,
+      "description": "心理作用の候補。上位2件まで(S3)。断定しない提示文とセット。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "confidence", "evidence_answer_ids", "explanation", "counter_question"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "EMOTION_AVOIDANCE",
+              "RESPONSIBILITY_AVOIDANCE",
+              "OPPORTUNITY_LOSS_PARALYSIS",
+              "SELF_JUSTIFICATION",
+              "APPROVAL_SEEKING"
+            ]
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence_answer_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "根拠となった decision_answers.id。空の推定は破棄される(6.3)。"
+          },
+          "explanation": {
+            "type": "string",
+            "description": "観察事実の説明。「〜の可能性」形式。人格の断定は禁止。"
+          },
+          "counter_question": {
+            "type": "string",
+            "description": "推定を反証できる質問"
+          }
+        }
+      }
+    },
+    "next_question": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "text", "purpose"],
+      "description": "次の1問(4.5)。ルールが選んだ候補をLLMが自然な日本語に整えたもの。null なら質問終了。",
+      "properties": {
+        "code": { "type": "string" },
+        "text": { "type": "string" },
+        "purpose": { "type": "string" }
+      }
+    },
+    "readiness": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["verdict", "missing", "stop_condition"],
+      "description": "判断可能性ルーター(4.3)の候補。stage=READINESS のときのみ。",
+      "properties": {
+        "verdict": { "type": "string", "enum": ["THINK", "RESEARCH", "ASK", "TEST", "BET"] },
+        "missing": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["QUESTION", "RECOGNITION", "VALUE", "AGENCY", "EXECUTION"] }
+        },
+        "stop_condition": { "type": ["string", "null"], "description": "調査・実験の停止条件" }
+      }
+    },
+    "summary": {
+      "type": ["string", "null"],
+      "description": "回答の要約・Decision Cardの文章化(6.1)。"
+    },
+    "contradictions": {
+      "type": "array",
+      "description": "矛盾・曖昧表現の候補(6.1)。指摘であって断定ではない。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement_ids", "explanation"],
+        "properties": {
+          "statement_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "explanation": { "type": "string" }
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "reason"],
+      "description": "S0 Safety(4.4/6.4)。EMERGENCY は通常フローを中断する。",
+      "properties": {
+        "level": { "type": "string", "enum": ["NORMAL", "HIGH_RISK", "EMERGENCY"] },
+        "reason": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
