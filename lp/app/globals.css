@@ -75,3 +75,16 @@
 .shotRow{grid-template-columns:1fr;gap:50px;margin-top:55px}
 .shotItem .shotFrame,.shotItem figcaption{max-width:260px}
 }
+
+/* 前後の対比。枕詞が小さすぎて見出しと切り離れており、
+   「説明を変える」だけが目に入って良し悪しが判断できなかった。
+   枕詞を見出しと一続きに見せ、左(これまで)を沈ませて対比を作る。 */
+.compare > div > span{font-size:13.5px;font-weight:900;letter-spacing:.02em;line-height:1.6}
+.compare strong{margin-top:20px}
+.compare > div:first-child > span{color:#8f8f8f}
+.compare > div:first-child > strong{color:#5f5f5f}
+.compare > div:first-child > p{color:#8a8a8a}
+@media(max-width:800px){
+  .compare strong{margin-top:16px}
+  .compare > div > span{font-size:13px}
+}
