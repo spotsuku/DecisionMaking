@@ -100,3 +100,11 @@ a.primary{align-items:center;text-decoration:none}
 .footerLinks{display:flex;flex-wrap:wrap;gap:8px 20px}
 .footerLinks a{color:#bdbdbd;text-decoration:underline;text-underline-offset:4px}
 .footerLinks a:hover{color:#fff}
+
+/* スマホでは、名言を先に、人物を後に。
+   縦に積むと写真が画面を占め、読ませたい言葉に辿り着く前に離脱していた。
+   (横に並ぶ幅では、左に人物・右に言葉の並びのまま) */
+@media(max-width:800px){
+  .quoteFeature .quoteCopy{order:1}
+  .quoteFeature .quotePortrait{order:2}
+}
