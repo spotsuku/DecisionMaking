@@ -227,7 +227,9 @@ button { font-family: var(--font); }
   border-radius: 999px; font-size: 12.5px; font-weight: 700;
   background: var(--ink); color: #fff;
 }
-.chip-btn.soft { background: var(--bg); color: var(--ink-soft); box-shadow: var(--ring); }
+/* 控えめな方のボタン。白地に薄い文字だと、白いカードの上では
+   押せるものだと見えない。輪郭と、本文と同じ濃さの文字で示す */
+.chip-btn.soft { background: var(--bg); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
 .chip-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------------------------------- forms */
