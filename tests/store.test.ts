@@ -1,7 +1,8 @@
 // ストアの不変条件テスト(INV-01〜INV-05 / 7.1 Commitトランザクション / 5.2 変更プロトコル)
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { store } from "../src/lib/store";
+import { store, migrate } from "../src/lib/store";
+import { emptyDB, type DB } from "../src/lib/types";
 
 const plusDays = (n: number) => new Date(Date.now() + n * 86400000).toISOString();
 
@@ -201,5 +202,48 @@ describe("決断を閉じる(撤退も正式な選択)", () => {
     const d = store.getSnapshot().decisions[0];
     expect(d.closeProtected).toBeNull();
     expect(d.closeLearning).toBeNull();
+  });
+});
+
+describe("古い形式の記録を読み込む(移行)", () => {
+  /** 端末に残っている古い記録の形。型を満たさないので unknown 経由で渡す */
+  const asDB = (partial: Record<string, unknown>) => ({ ...emptyDB(), ...partial }) as unknown as DB;
+
+  it("受入テスト: answerJson の無い回答を読んでも落ちない", () => {
+    // 診断画面が a.answerJson[part.key] を読んで落ちていた、実際の形
+    const db = migrate(asDB({
+      answers: [{
+        id: "a1", questionId: "q1", versionId: "v1", questionCode: "Q_CRITERIA",
+        answerText: "家族との時間を守る", submittedAt: "2026-08-29T00:00:00Z",
+      }],
+    }));
+    const a = db.answers[0];
+    expect(a.answerJson).toEqual({});
+    expect(a.skipped).toBe(false);
+    expect(() => a.answerJson["protect"]).not.toThrow();
+  });
+
+  it("配列であるべき項目が欠けていても埋める", () => {
+    const db = migrate(asDB({
+      blockers: [{ id: "b1", versionId: "v1", blockerCode: "EMOTION_AVOIDANCE",
+        score: 0.5, confidence: 0.5, counterQuestion: "", algorithmVersion: "x",
+        createdAt: "2026-08-29T00:00:00Z" }],
+      readiness: [{ id: "r1", versionId: "v1", verdict: "THINK",
+        stopCondition: null, note: "", createdAt: "2026-08-29T00:00:00Z" }],
+    }));
+    expect(db.blockers[0].evidenceRefs).toEqual([]);
+    expect(db.readiness[0].missing).toEqual([]);
+  });
+
+  it("いまの形式の記録は書き換えない(INV-01)", () => {
+    const db = migrate(asDB({
+      answers: [{
+        id: "a1", questionId: "q1", versionId: "v1", questionCode: "Q_CRITERIA",
+        answerText: "守: 家族", answerJson: { protect: "家族" }, skipped: false,
+        submittedAt: "2026-08-30T00:00:00Z",
+      }],
+    }));
+    expect(db.answers[0].answerJson).toEqual({ protect: "家族" });
+    expect(db.answers[0].answerText).toBe("守: 家族");
   });
 });

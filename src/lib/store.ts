@@ -49,6 +49,34 @@ const now = () => new Date().toISOString();
 
 type Listener = () => void;
 
+/**
+ * 古い形式の記録を、いまの形に揃える。
+ *
+ * 端末に残った記録は、こちらが列を足しても古いままになる。
+ * 実際に、answerJson を持たない回答を読んで診断画面が落ちていた
+ * (Cannot read properties of undefined (reading 'protect'))。
+ * 読む側すべてに防御を書くのは漏れるので、入口で一度だけ揃える。
+ *
+ * 値は足すだけで、書き換えない(INV-01: 記録は改変しない)。
+ */
+export function migrate(db: DB): DB {
+  for (const a of db.answers) {
+    if (!a.answerJson || typeof a.answerJson !== "object") a.answerJson = {};
+    if (typeof a.skipped !== "boolean") a.skipped = false;
+    if (!a.answerText) a.answerText = "";
+  }
+  for (const d of db.decisions) {
+    if (d.hidden === undefined) d.hidden = false;
+  }
+  for (const b of db.blockers) {
+    if (!Array.isArray(b.evidenceRefs)) b.evidenceRefs = [];
+  }
+  for (const r of db.readiness) {
+    if (!Array.isArray(r.missing)) r.missing = [];
+  }
+  return db;
+}
+
 class Store {
   private db: DB = emptyDB();
   private listeners = new Set<Listener>();
@@ -61,7 +89,7 @@ class Store {
     if (this.loaded || typeof window === "undefined") return;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) this.db = { ...emptyDB(), ...(JSON.parse(raw) as Partial<DB>) };
+      if (raw) this.db = migrate({ ...emptyDB(), ...(JSON.parse(raw) as Partial<DB>) });
     } catch {
       this.db = emptyDB();
     }

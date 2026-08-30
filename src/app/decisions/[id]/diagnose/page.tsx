@@ -303,12 +303,17 @@ export default function DiagnosePage() {
                           分からないままにしました。ここは「まだ分かっていない」という記録です。
                         </div>
                       )}
-                      {a && !a.skipped && def && def.parts.length > 1 && (
-                        <div className="bubble q note">
-                          「{def.parts.filter((part) => a.answerJson[part.key]).map((part) => part.label).join("」「")}」
-                          として記録しました。
-                        </div>
-                      )}
+                      {(() => {
+                        // 古い記録には欄ごとの値が無い。空の「」を出さない
+                        if (!a || a.skipped || !def || def.parts.length < 2) return null;
+                        const filed = def.parts.filter((part) => a.answerJson[part.key]);
+                        if (filed.length === 0) return null;
+                        return (
+                          <div className="bubble q note">
+                            「{filed.map((part) => part.label).join("」「")}」として記録しました。
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
