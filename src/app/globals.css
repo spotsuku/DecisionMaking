@@ -489,3 +489,53 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 }
 .invite .it { font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; }
 .invite .id { font-size: 12.5px; color: var(--ink-soft); line-height: 1.8; margin-top: 5px; }
+
+/* ---------------------------------- 入力欄(チャット) */
+
+.composer {
+  display: flex; align-items: flex-end; gap: 8px;
+  background: var(--bg); border-radius: 24px; padding: 7px 7px 7px 16px;
+  box-shadow: inset 0 0 0 1.5px var(--ink); margin-top: 10px;
+}
+.composer textarea {
+  flex: 1; border: none; background: transparent; resize: none;
+  padding: 9px 0; min-height: 22px; max-height: 148px;
+  font-family: var(--font); font-size: 15px; line-height: 1.65; color: var(--ink);
+}
+.composer textarea:focus { outline: none; }
+.composer textarea::placeholder { color: var(--ink-faint); }
+.composer .c-mic, .composer .c-send {
+  flex: none; width: 38px; height: 38px; border-radius: 50%;
+  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.composer .c-mic { background: var(--surface); color: var(--ink); }
+.composer .c-mic.listening { background: var(--accent); color: #fff; }
+.composer .c-send { background: var(--ink); color: #fff; }
+.composer .c-send:disabled { background: var(--surface); color: var(--ink-faint); cursor: default; }
+
+.c-dots { display: flex; gap: 3px; }
+.c-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: cdot 1s infinite; }
+.c-dots i:nth-child(2) { animation-delay: .15s; }
+.c-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes cdot { 0%, 60%, 100% { opacity: .3 } 30% { opacity: 1 } }
+
+/* 入力欄まわりの補助操作。帯の外に小さく置く */
+.composer-aside {
+  display: flex; justify-content: center; gap: 18px;
+  margin: 10px 0 0; font-size: 12.5px; color: var(--ink-soft);
+}
+.composer-aside button {
+  border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: inherit; color: inherit;
+  padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* 折りたたみ(診断の状態など) */
+.disclosure {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  padding: 15px 2px; margin-top: 14px;
+  font-size: 13px; font-weight: 700; color: var(--ink-soft);
+  border-top: 1px solid var(--line);
+}
+.disclosure .mark { color: var(--ink-faint); font-size: 11px; }
