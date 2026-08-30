@@ -66,9 +66,15 @@ export default function HomePage() {
 
   return (
     <>
+      {/* LPと同じ黒で着地させる。書く場所だけを紙として白く抜く */}
+      <div className="topband">
       <div className="appbar" style={{ alignItems: "flex-start", paddingBottom: 6 }}>
         <div>
-          <div className="home-date">{dateLabel}</div>
+          <div className="home-top">
+            <span className="brandmark">DECISION MAKING</span>
+            <span className="sep" aria-hidden="true" />
+            <span className="home-date">{dateLabel}</span>
+          </div>
           <div className="home-hello">こんにちは。</div>
         </div>
         <Link href="/identity" className="avatar-btn" aria-label="アカウント">
@@ -100,6 +106,7 @@ export default function HomePage() {
         <button className="btn primary" style={{ marginTop: 10, minHeight: 46 }} onClick={goJournal}>
           <IconPen /> {dump.trim() ? "書き出して決めることを探す" : "書き出す"}
         </button>
+      </div>
       </div>
 
       <Link href="/decisions/new" style={{ display: "block", marginTop: 10 }}>

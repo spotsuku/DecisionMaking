@@ -612,3 +612,29 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 
 /* 済んだ項目の「まだなら何をするか」は、読めるが目立たない濃さに落とす */
 .check-row.done .card-meta { opacity: 0.45; }
+
+/* ---------------------------------- 着地の黒(ホーム上端)
+
+   LPは黒地。そこから来て白い画面に着くと、別のサービスに見えて印象が切れる。
+   ホームの上端だけ地を黒にし、書く場所(紙)を白く抜いてLPと地続きにする。
+
+   アプリ全体を黒にはしない。記録は後から何度も読み返すもので、
+   黒地に白文字の長文は読み続けるのがつらい。それに黒は、この配色では
+   「決めるもの」の色(ボタン・Decision Card・タブの＋)なので、
+   全面を黒にするとその意味が消える。 */
+.topband {
+  background: var(--ink); color: #fff;
+  margin: 0 -20px 14px; padding: 0 20px 18px;
+  border-radius: 0 0 26px 26px;
+}
+.home-top { display: flex; align-items: center; gap: 9px; }
+.brandmark { font-size: 10.5px; font-weight: 800; letter-spacing: 0.18em; }
+.home-top .sep { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex: none; }
+.topband .home-date { color: #8a8480; }
+.topband .home-hello { color: #fff; }
+.topband .avatar { background: #2b2724; color: #cfc9c2; }
+.topband .hero { background: transparent; padding: 0; margin: 10px 0 0; }
+.topband .hero .tag { color: #9d968e; }
+.topband .hero .big { color: #fff; }
+/* 黒地の上では、白い面がいちばん強い */
+.topband .btn.primary { background: var(--bg); color: var(--ink); }
