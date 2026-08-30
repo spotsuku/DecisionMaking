@@ -6,6 +6,7 @@ import { useState } from "react";
 import { store } from "@/lib/store";
 import type { Decision, DecisionVersion } from "@/lib/types";
 import { DateField } from "@/components/DateField";
+import { OwnershipNote } from "@/components/OwnershipNote";
 
 export function FramePanel({ decision, version }: { decision: Decision; version: DecisionVersion }) {
   const locked = !!version.committedAt;
@@ -48,6 +49,12 @@ export function FramePanel({ decision, version }: { decision: Decision; version:
           <DateField value={dueAt} onChange={setDueAt} placeholder="日付を選ぶ" />
         </div>
       </div>
+      <OwnershipNote
+        question={question}
+        ownerRole={ownerRole}
+        onPick={(q, owner) => { setQuestion(q); setOwnerRole(owner); }}
+      />
+
       <button
         className="btn primary"
         onClick={() => {

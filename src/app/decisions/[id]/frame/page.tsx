@@ -12,6 +12,7 @@ import { useDecision } from "@/lib/useDecision";
 import { store } from "@/lib/store";
 import { IconBack } from "@/components/icons";
 import { DateField } from "@/components/DateField";
+import { OwnershipNote } from "@/components/OwnershipNote";
 
 export default function FramePage() {
   const router = useRouter();
@@ -71,6 +72,12 @@ export default function FramePage() {
             <DateField value={dueAt} onChange={setDueAt} placeholder="日付を選ぶ" />
             <div className="hint">この日を過ぎても決まっていなければ、ホームに出てきます。</div>
           </div>
+
+          <OwnershipNote
+            question={question}
+            ownerRole={ownerRole}
+            onPick={(q, owner) => { setQuestion(q); setOwnerRole(owner); setError(null); }}
+          />
 
           {error && <div className="callout">{error}</div>}
 

@@ -62,6 +62,13 @@ const LEADING_FILLER =
   /^(?:(?:えーと|えっと|ええと|うーん|えー+|あのー+|そのー+)[、,\s]*|(?:あの|その|まあ|なんか|はい)[、,\s]+)/;
 
 /**
+ * 話し始めの挨拶。句点を打たずに本題へ入る人が多く、
+ * 「こんにちは今日の出資が…」のように決断の文へ混ざり込む。
+ */
+const GREETING =
+  /^(?:こんにちは|こんばんは|おはよう(?:ございます)?|お疲れ(?:様|さま)(?:です)?|どうも|やあ)[、,\s]*/;
+
+/**
  * 格助詞・接続で終わる断片は、文がまだ続いている。
  * 音声入力は句点が細切れに入るため、これがないと
  * 「豆柴の小太郎を」と「買うかどうか」が別の文に切れてしまう。
@@ -75,7 +82,7 @@ const MIN_LEN = 4;
 function toSentences(text: string): string[] {
   const fragments = text
     .split(/[。\n!?！?]+/)
-    .map((s) => s.replace(LEADING_FILLER, "").trim())
+    .map((s) => s.replace(GREETING, "").replace(LEADING_FILLER, "").trim())
     .filter(Boolean);
 
   const out: string[] = [];

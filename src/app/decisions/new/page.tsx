@@ -10,6 +10,7 @@ import { PLANS } from "@/lib/plan";
 import { DOMAIN_LABEL, type DomainCode } from "@/lib/types";
 import { IconBack } from "@/components/icons";
 import { DateField } from "@/components/DateField";
+import { OwnershipNote } from "@/components/OwnershipNote";
 
 export default function NewDecisionPage() {
   const router = useRouter();
@@ -122,6 +123,12 @@ export default function NewDecisionPage() {
           </select>
         </div>
       </div>
+      <OwnershipNote
+        question={question}
+        ownerRole={ownerRole}
+        onPick={(q, owner) => { setQuestion(q); setOwnerRole(owner); setError(null); }}
+      />
+
       <div className="callout neutral" style={{ fontSize: 11.5 }}>
         医療・法律・投資は情報整理の支援に限定し、結論は専門家に確認します。
       </div>

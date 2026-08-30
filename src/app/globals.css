@@ -638,3 +638,14 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 .topband .hero .big { color: #fff; }
 /* 黒地の上では、白い面がいちばん強い */
 .topband .btn.primary { background: var(--bg); color: var(--ink); }
+
+/* 「それは相手が決めることでは?」の言い換え候補。
+   文が長いので、丸いチップではなく1行ずつ左揃えで読ませる */
+.swap-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.swap-list button {
+  width: 100%; min-height: 44px; padding: 10px 14px;
+  display: flex; align-items: center; justify-content: flex-start; text-align: left;
+  border: none; cursor: pointer; border-radius: 14px;
+  background: var(--bg); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink);
+  font-family: var(--font); font-size: 13.5px; font-weight: 700; line-height: 1.5;
+}
