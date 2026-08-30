@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useDB, fmtDate, daysBetween, isOverdue } from "@/lib/useDB";
-import { STATE_LABEL, DOMAIN_LABEL } from "@/lib/types";
+import { STATE_LABEL, CLOSE_KIND_LABEL, DOMAIN_LABEL } from "@/lib/types";
 import { IconBack, IconChevron } from "@/components/icons";
 
 function DecisionsList() {
@@ -49,7 +49,7 @@ function DecisionsList() {
                 <div className="name">{d.title}</div>
                 <div className="chips" style={{ marginTop: 5 }}>
                   <span className={`badge ${d.status === "COMMITTED" || d.status === "IN_ACTION" ? "inverse" : ""}`}>
-                    {STATE_LABEL[d.status]}
+                    {d.status === "CLOSED" && d.closeKind ? CLOSE_KIND_LABEL[d.closeKind] : STATE_LABEL[d.status]}
                   </span>
                   <span className="badge soft">{DOMAIN_LABEL[d.domain]}</span>
                   {isOverdue(d.dueAt) && d.status !== "COMMITTED" && d.status !== "IN_ACTION" && (

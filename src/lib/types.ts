@@ -61,7 +61,21 @@ export interface Decision {
   closedAt: string | null;
   /** 画面上の非表示(soft deleteではない。履歴は消えない) */
   hidden: boolean;
+  /** 閉じ方。撤退も正式な選択として、完了と区別して残す(非目標1.3) */
+  closeKind?: CloseKind;
+  closeReason?: string;
+  /** その撤退・完了で何を守ったか */
+  closeProtected?: string | null;
+  closeLearning?: string | null;
 }
+
+/** 決断の閉じ方。COMPLETED=やり切った / WITHDRAWN=意図してやめた */
+export type CloseKind = "COMPLETED" | "WITHDRAWN";
+
+export const CLOSE_KIND_LABEL: Record<CloseKind, string> = {
+  COMPLETED: "やり切った",
+  WITHDRAWN: "意図的な撤退",
+};
 
 /** 不変の決断スナップショット。COMMITTED後は更新・削除しない(INV-01) */
 export interface DecisionVersion {

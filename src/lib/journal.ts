@@ -8,6 +8,9 @@ export interface JournalEntry {
 }
 
 /** QUESTION = すでに問いの形 / SIGNAL = 未決・停滞の兆候(問いは本人が立てる) */
+/** ホームで書いた本文を書き出しページへ引き継ぐキー */
+export const JOURNAL_SEED_KEY = "dm-journal-seed";
+
 export type CandidateKind = "QUESTION" | "SIGNAL";
 
 export interface Candidate {

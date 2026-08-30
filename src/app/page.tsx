@@ -3,11 +3,14 @@
 // Home: 書き出しファースト。
 // ①ジャーナリングへの入口 ②決めずに置いていること(観察事実) ③今日の一歩 ④決断へのリンク
 
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDB, fmtDate } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { buildObservations } from "@/lib/observations";
+import { useSpeechInput, appendSpeech } from "@/lib/useSpeech";
+import { JOURNAL_SEED_KEY } from "@/lib/journal";
 import { IconChevron, IconMic, IconPen, IconUser, IconWarn } from "@/components/icons";
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -15,6 +18,25 @@ const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 export default function HomePage() {
   const db = useDB();
   const router = useRouter();
+  // ここで直接書ける。押した瞬間に画面が変わると、書きたかったことが飛ぶ
+  const [dump, setDump] = useState("");
+  const dumpRef = useRef(dump);
+  dumpRef.current = dump;
+  const { listening, supported: micOk, toggle: toggleMic, stop: stopMic } = useSpeechInput((spoken) =>
+    setDump(appendSpeech(dumpRef.current, spoken))
+  );
+
+  /** 書いた内容を持ったまま書き出しページへ渡す */
+  const goJournal = () => {
+    stopMic();
+    const text = dump.trim();
+    try {
+      if (text) window.sessionStorage.setItem(JOURNAL_SEED_KEY, text);
+    } catch {
+      // 保存できなくても画面は進む
+    }
+    router.push("/journal");
+  };
   const now = new Date();
   const dateLabel = `${now.getMonth() + 1}月${now.getDate()}日 ${WEEKDAYS[now.getDay()]}曜日`;
 
@@ -53,12 +75,26 @@ export default function HomePage() {
       <div className="hero">
         <div className="tag">ジャーナリング — 思考をそのままアウトプット</div>
         <div className="big">決められないこと、迷っていることを、書き出してみよう。</div>
-        <button className="jbox" onClick={() => router.push("/journal")}>
-          仕事のこと、家のこと、なんでも。
-          <span className="mic-corner"><IconMic /></span>
-        </button>
-        <button className="btn primary" style={{ marginTop: 10, minHeight: 46 }} onClick={() => router.push("/journal")}>
-          <IconPen /> 書き出す
+        <div className="jbox">
+          <textarea
+            value={dump}
+            onChange={(e) => setDump(e.target.value)}
+            placeholder="仕事のこと、家のこと、なんでも。"
+            rows={4}
+          />
+          {micOk && (
+            <button
+              type="button"
+              className={`mic-corner ${listening ? "listening" : ""}`}
+              onClick={toggleMic}
+              aria-label={listening ? "音声入力を止める" : "音声で入力する"}
+            >
+              <IconMic />
+            </button>
+          )}
+        </div>
+        <button className="btn primary" style={{ marginTop: 10, minHeight: 46 }} onClick={goJournal}>
+          <IconPen /> {dump.trim() ? "書き出して決めることを探す" : "書き出す"}
         </button>
       </div>
 

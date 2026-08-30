@@ -9,7 +9,7 @@ import { useDB, fmtDate, isOverdue } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { detectDrift } from "@/lib/drift";
 import { readinessDisplay, READINESS_DISPLAY_LABEL } from "@/lib/stateMachine";
-import { STATE_LABEL, DOMAIN_LABEL } from "@/lib/types";
+import { STATE_LABEL, DOMAIN_LABEL, CLOSE_KIND_LABEL } from "@/lib/types";
 import { IconBack, IconChevron, IconWarn } from "@/components/icons";
 
 export default function DecisionHubPage() {
@@ -78,7 +78,11 @@ export default function DecisionHubPage() {
       </div>
 
       <div className="chips">
-        <span className="badge inverse">{STATE_LABEL[decision.status]}</span>
+        <span className="badge inverse">
+          {decision.status === "CLOSED" && decision.closeKind
+            ? CLOSE_KIND_LABEL[decision.closeKind]
+            : STATE_LABEL[decision.status]}
+        </span>
         <span className="badge soft">{DOMAIN_LABEL[decision.domain]}</span>
         <span className="badge soft">v{decision.currentVersionNo}</span>
         {decision.dueAt && (
@@ -97,6 +101,27 @@ export default function DecisionHubPage() {
         </div>
         <span style={{ fontSize: 12.5, fontWeight: 700 }}>{cta.label}</span>
       </div>
+
+      {decision.status === "CLOSED" && decision.closeReason && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="card-meta" style={{ fontWeight: 700 }}>
+            {decision.closeKind === "WITHDRAWN" ? "意図してやめた理由" : "やり切ったと判断した理由"}
+          </div>
+          <div style={{ fontSize: 14, margin: "5px 0 0", lineHeight: 1.8 }}>{decision.closeReason}</div>
+          {decision.closeProtected && (
+            <div style={{ fontSize: 13, marginTop: 8 }}>
+              <span className="card-meta">守れたもの</span>
+              <div>{decision.closeProtected}</div>
+            </div>
+          )}
+          {decision.closeLearning && (
+            <div style={{ fontSize: 13, marginTop: 8 }}>
+              <span className="card-meta">次に同じ場面が来たら</span>
+              <div>{decision.closeLearning}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {drift.drifting && (
         <div className="callout">
@@ -159,22 +184,11 @@ export default function DecisionHubPage() {
       </div>
 
       {decision.status !== "CLOSED" && decision.status !== "REVISED" && (
-        <button
-          className="btn ghost"
-          style={{ marginTop: 16 }}
-          onClick={() => {
-            const reason = window.prompt("完了・意図的撤退の理由(履歴に残ります)");
-            if (reason !== null) {
-              try {
-                store.closeDecision(decision.id, reason);
-              } catch (e) {
-                window.alert(e instanceof Error ? e.message : String(e));
-              }
-            }
-          }}
-        >
-          完了・意図的撤退にする
-        </button>
+        <Link href={`/decisions/${decision.id}/close`}>
+          <button className="btn ghost" style={{ marginTop: 16 }}>
+            やり切った・意図してやめる
+          </button>
+        </Link>
       )}
     </>
   );

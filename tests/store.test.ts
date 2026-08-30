@@ -160,3 +160,46 @@ describe("画面からの削除は非表示(3.8)", () => {
     expect(db.versions.filter((v) => v.decisionId === decision.id).length).toBeGreaterThan(0);
   });
 });
+
+describe("決断を閉じる(撤退も正式な選択)", () => {
+  it("撤退は完了と区別して記録される", () => {
+    store.resetAll();
+    const { decision } = store.createDecision({ title: "犬を迎える", question: "迎えるか", ownerRole: "自分", domain: "FAMILY", dueAt: plusDays(7) });
+    store.closeDecision(decision.id, "妻の在宅勤務が終わったから", {
+      kind: "WITHDRAWN",
+      protected: "家族に無理をさせずに済んだ",
+      learning: "世話をする人の予定を先に確かめる",
+    });
+    const d = store.getSnapshot().decisions.find((x) => x.id === decision.id)!;
+    expect(d.status).toBe("CLOSED");
+    expect(d.closeKind).toBe("WITHDRAWN");
+    expect(d.closeReason).toBe("妻の在宅勤務が終わったから");
+    expect(d.closeProtected).toBe("家族に無理をさせずに済んだ");
+    expect(d.closeLearning).toBe("世話をする人の予定を先に確かめる");
+  });
+
+  it("監査ログにも撤退として残る(INV-01)", () => {
+    store.resetAll();
+    const { decision } = store.createDecision({ title: "t", question: "q", ownerRole: "自分", domain: "WORK", dueAt: plusDays(7) });
+    store.closeDecision(decision.id, "前提が崩れた", { kind: "WITHDRAWN" });
+    const ev = store.getSnapshot().audit.filter((a) => a.entityId === decision.id).at(-1)!;
+    expect(ev.eventType).toBe("WITHDRAWN");
+    expect(ev.payloadSummary).toContain("意図的撤退");
+  });
+
+  it("種別を渡さなければ完了として扱う", () => {
+    store.resetAll();
+    const { decision } = store.createDecision({ title: "t", question: "q", ownerRole: "自分", domain: "WORK", dueAt: plusDays(7) });
+    store.closeDecision(decision.id, "やり切った");
+    expect(store.getSnapshot().decisions[0].closeKind).toBe("COMPLETED");
+  });
+
+  it("任意欄が空なら null で保存する(空文字を残さない)", () => {
+    store.resetAll();
+    const { decision } = store.createDecision({ title: "t", question: "q", ownerRole: "自分", domain: "WORK", dueAt: plusDays(7) });
+    store.closeDecision(decision.id, "理由", { kind: "WITHDRAWN", protected: "  ", learning: "" });
+    const d = store.getSnapshot().decisions[0];
+    expect(d.closeProtected).toBeNull();
+    expect(d.closeLearning).toBeNull();
+  });
+});

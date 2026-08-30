@@ -3,12 +3,12 @@
 // 書き出し(ブレインダンプ): 自由記述 or 音声で頭の中を出す。
 // 保存すると、決断が隠れていそうな文を候補として提案する(提案のみ・確定は本人 INV-05)。
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDB, fmtDateTime } from "@/lib/useDB";
 import { store } from "@/lib/store";
-import { candidateTitle } from "@/lib/journal";
+import { candidateTitle, JOURNAL_SEED_KEY } from "@/lib/journal";
 import { assistExtract } from "@/lib/ai/assist";
 import type { SourcedCandidate } from "@/lib/ai/types";
 import { useSpeechInput, appendSpeech } from "@/lib/useSpeech";
@@ -59,6 +59,19 @@ export default function JournalPage() {
     router.push("/decisions/new");
   };
 
+  // ホームで書いた本文があれば受け取る(書いたものが消えないように)
+  useEffect(() => {
+    try {
+      const seed = window.sessionStorage.getItem(JOURNAL_SEED_KEY);
+      if (seed) {
+        window.sessionStorage.removeItem(JOURNAL_SEED_KEY);
+        setText(seed);
+      }
+    } catch {
+      // 受け取れなくても、その場で書き直せる
+    }
+  }, []);
+
   const recentEntries = [...db.journal].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
@@ -66,9 +79,7 @@ export default function JournalPage() {
       <div className="appbar">
         <button className="back" onClick={() => router.push("/")} aria-label="戻る"><IconBack /></button>
         <span className="title">書き出し</span>
-        <button className="appbar-action" onClick={save} disabled={!text.trim() || reading}>
-          {reading ? "読んでいます…" : "保存"}
-        </button>
+
       </div>
 
       <textarea
@@ -106,9 +117,19 @@ export default function JournalPage() {
       </div>
 
       {candidates === null && (
-        <Link href="/decisions/new" style={{ display: "block", marginTop: 16 }}>
-          <span className="btn outline">決めることを直接登録する</span>
-        </Link>
+        <>
+          <button
+            className="btn primary"
+            style={{ marginTop: 14, minHeight: 50 }}
+            onClick={save}
+            disabled={!text.trim() || reading}
+          >
+            {reading ? "読んでいます…" : "保存して、決めることを探す"}
+          </button>
+          <Link href="/decisions/new" style={{ display: "block", marginTop: 8 }}>
+            <span className="btn outline">決めることを直接登録する</span>
+          </Link>
+        </>
       )}
 
       {candidates !== null && (() => {

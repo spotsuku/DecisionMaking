@@ -115,13 +115,18 @@ button { font-family: var(--font); }
 .hero .big { font-size: 17px; font-weight: 800; line-height: 1.5; margin: 6px 0 2px; letter-spacing: -0.01em; }
 
 .jbox {
-  display: block; width: 100%; text-align: left;
-  background: var(--bg); border: none; cursor: pointer;
+  display: block; width: 100%;
+  background: var(--bg); border: none;
   border-radius: var(--r-input); padding: 14px 16px 12px;
-  min-height: 124px; box-shadow: var(--ring); position: relative;
-  font-family: var(--font); font-size: 13.5px; line-height: 1.9; color: var(--ink-faint);
-  margin-top: 10px;
+  box-shadow: var(--ring); position: relative; margin-top: 10px;
 }
+.jbox textarea {
+  display: block; width: 100%; border: none; background: transparent; resize: none;
+  padding: 0; padding-right: 44px; min-height: 96px;
+  font-family: var(--font); font-size: 14.5px; line-height: 1.9; color: var(--ink);
+}
+.jbox textarea:focus { outline: none; }
+.jbox textarea::placeholder { color: var(--ink-faint); }
 .mic-corner {
   position: absolute; right: 10px; bottom: 10px;
   width: 42px; height: 42px; border-radius: 50%;
@@ -411,3 +416,12 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 
 .page-title { font-size: 21px; font-weight: 800; margin: 22px 0 6px; letter-spacing: -0.01em; }
 .page-sub { color: var(--ink-soft); font-size: 13px; margin: 0 0 18px; }
+
+/* 二択のカード(閉じ方の選択など) */
+.choice-card {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: none; border-radius: var(--r-card);
+  padding: 15px 17px; margin-top: 8px; font-family: inherit;
+}
+.choice-card .ct { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.choice-card .cd { display: block; font-size: 12.5px; color: var(--ink-soft); line-height: 1.75; margin-top: 4px; }

@@ -14,6 +14,7 @@ import type {
   ActionStatus,
   AnswerMode,
   Attribution,
+  CloseKind,
   BlockerAssessment,
   Criterion,
   DB,
@@ -591,14 +592,35 @@ class Store {
     return { ok: true, newVersion };
   }
 
-  closeDecision(decisionId: string, reason: string) {
+  /**
+   * 決断を閉じる。撤退も正式な選択として扱う(非目標1.3)。
+   * 理由・守ったもの・学びは、あとで振り返るために記録に残す(INV-01)。
+   */
+  closeDecision(
+    decisionId: string,
+    reason: string,
+    opts: { kind?: CloseKind; protected?: string; learning?: string } = {}
+  ) {
     this.load();
     const d = this.db.decisions.find((x) => x.id === decisionId);
     if (!d) return;
     if (!canTransition(d.status, "CLOSED")) throw new Error(`状態 ${d.status} からは完了できません`);
+    const kind: CloseKind = opts.kind ?? "COMPLETED";
     d.status = "CLOSED";
     d.closedAt = now();
-    this.audit("decision", decisionId, "CLOSED", reason);
+    d.closeKind = kind;
+    d.closeReason = reason;
+    d.closeProtected = opts.protected?.trim() || null;
+    d.closeLearning = opts.learning?.trim() || null;
+    const detail = [
+      kind === "WITHDRAWN" ? "意図的撤退" : "完了",
+      reason,
+      opts.protected?.trim() ? `守ったもの: ${opts.protected.trim()}` : "",
+      opts.learning?.trim() ? `学び: ${opts.learning.trim()}` : "",
+    ]
+      .filter(Boolean)
+      .join(" / ");
+    this.audit("decision", decisionId, kind === "WITHDRAWN" ? "WITHDRAWN" : "CLOSED", detail);
     this.persist();
   }
 
