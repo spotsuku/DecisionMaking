@@ -68,9 +68,11 @@ export default function DiagnosePage() {
   };
 
   const [routing, setRouting] = useState(false);
-  const [factsMissing, setFactsMissing] = useState(false);
-  const [needsAsk, setNeedsAsk] = useState(false);
-  const [testable, setTestable] = useState(false);
+  // 最初は何も済んでいない状態から始める。開いた瞬間に「もう決められる」と
+  // 出すと、確かめないまま先へ進んでしまう
+  const [factsMissing, setFactsMissing] = useState(true);
+  const [needsAsk, setNeedsAsk] = useState(true);
+  const [testable, setTestable] = useState(true);
   const [unknowable, setUnknowable] = useState(false);
   const [stopCondition, setStopCondition] = useState("");
 
@@ -245,8 +247,19 @@ export default function DiagnosePage() {
     );
   }
 
+  /**
+   * 「残りは調べても試しても誰にも分からない」を選んだ時点で、
+   * 残りの手立ては無いと本人が言っている。調査や相談を理由に足止めしない。
+   */
+  const routerInput = unknowable
+    ? { factsMissing: false, needsAsk: false, testable: false, unknowable: true }
+    : { factsMissing, needsAsk, testable, unknowable: false };
+
+  // 押す前に結果が見えないと、チェックの意味が分からないまま選ぶことになる
+  const preview: Readiness = routeReadiness(routerInput);
+
   const runRouter = () => {
-    const verdict: Readiness = routeReadiness({ factsMissing, needsAsk, testable, unknowable });
+    const verdict: Readiness = routeReadiness(routerInput);
     store.saveReadiness(version.id, verdict, gaps.filter((g) => g.missing).map((g) => g.gap), stopCondition || null, "");
     setRouting(false);
   };
@@ -408,24 +421,51 @@ export default function DiagnosePage() {
             </button>
           ) : (
             <div className="card strong">
-              <p className="card-meta" style={{ marginTop: 0 }}>当てはまるものを選んでください。どれも当てはまらなければTHINK(決められる)です。</p>
+              <p className="card-meta" style={{ marginTop: 0, lineHeight: 1.8 }}>
+                終わったものにチェックを入れてください。3つそろえば、決められます。
+              </p>
               <label className="check-row">
-                <input type="checkbox" checked={factsMissing} onChange={(e) => setFactsMissing(e.target.checked)} />
-                <span>確認すれば分かる事実が残っている<br /><span className="card-meta">→ RESEARCH: 調査項目と期限を決める</span></span>
+                <input type="checkbox" checked={!factsMissing} onChange={(e) => setFactsMissing(!e.target.checked)} />
+                <span>
+                  確かめられる事実は、確かめ終わった
+                  {factsMissing && <><br /><span className="card-meta">残っているなら → 調べることと期限を決める</span></>}
+                </span>
               </label>
               <label className="check-row">
-                <input type="checkbox" checked={needsAsk} onChange={(e) => setNeedsAsk(e.target.checked)} />
-                <span>経験者・権限を持つ人に聞く必要がある<br /><span className="card-meta">→ ASK: 誰に何を聞くかを決める</span></span>
+                <input type="checkbox" checked={!needsAsk} onChange={(e) => setNeedsAsk(!e.target.checked)} />
+                <span>
+                  聞くべき人には、聞いた
+                  {needsAsk && <><br /><span className="card-meta">残っているなら → 誰に何を聞くかを決める</span></>}
+                </span>
               </label>
               <label className="check-row">
-                <input type="checkbox" checked={testable} onChange={(e) => setTestable(e.target.checked)} />
-                <span>考えても確定しないが、小さく試せば分かる<br /><span className="card-meta">→ TEST: 最小実験と損失上限を決める</span></span>
+                <input type="checkbox" checked={!testable} onChange={(e) => setTestable(!e.target.checked)} />
+                <span>
+                  小さく試して分かることは、試した
+                  {testable && <><br /><span className="card-meta">残っているなら → 最小の実験と損失上限を決める</span></>}
+                </span>
               </label>
-              <label className="check-row">
-                <input type="checkbox" checked={unknowable} onChange={(e) => setUnknowable(e.target.checked)} />
-                <span>調べても試しても、誰にも分からない<br /><span className="card-meta">→ BET: 仮説と撤退条件を決めて賭ける</span></span>
-              </label>
-              <div className="field" style={{ marginTop: 8 }}>
+
+              {/* 「誰にも分からない」は詰まりではなく、決められる側の理由。
+                  他と並べると、チェックを入れるほど決められなくなるように見えてしまう */}
+              {(factsMissing || needsAsk || testable) && (
+                <div className="bet-out">
+                  <label className="check-row">
+                    <input type="checkbox" checked={unknowable} onChange={(e) => setUnknowable(e.target.checked)} />
+                    <span>
+                      残りは、調べても試しても誰にも分からない
+                      <br /><span className="card-meta">それでも決めるなら → 仮説と撤退条件を決めて賭ける</span>
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              <div className="verdict-now">
+                <span className="badge inverse">{preview}</span>
+                <span>{READINESS_LABEL[preview]}</span>
+              </div>
+
+              <div className="field" style={{ marginTop: 10 }}>
                 <label>情報収集の停止条件</label>
                 <input type="text" value={stopCondition} onChange={(e) => setStopCondition(e.target.value)}
                   placeholder="例: 金曜までに見積2件。それ以上は集めない" />
