@@ -41,10 +41,12 @@ export interface BrainstormRequest {
   task: "brainstorm";
   /** これまでのやりとり(古い順) */
   turns: { from: "USER" | "APP"; text: string }[];
-  /** ルールが決めた段階。AIはこの意図の範囲で言い換える */
-  stage: "SPREAD" | "NARROW" | "SHARPEN";
+  /** この問いで何を確かめたいか。AIはこの意図の範囲でだけ言い換える */
+  intent: string;
   /** ルールの定型文。使えないときはこれに戻す */
   fallback: string;
+  /** すでに確かめたこと。二度聞かせないために渡す */
+  covered: string[];
   /** ここまでに見つかっている候補 */
   candidates: string[];
 }

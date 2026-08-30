@@ -6,7 +6,7 @@
 
 import { extractCandidates, type Candidate } from "../journal";
 import { splitFreeText, type ChatTurn, type QuestionDef } from "../diagnosis";
-import { nextPrompt, stageOf, type BrainstormState } from "../brainstorm";
+import { coveredTopics, type BrainstormState, type Prompt } from "../brainstorm";
 import { mergeCandidates, mergeSplit } from "./merge";
 import { isAiEnabled } from "../settings";
 import type { AiRequest, AiEnvelope, BrainstormResult, ExtractResult, ReplyResult, SourcedCandidate, SplitResult } from "./types";
@@ -85,19 +85,19 @@ export async function assistSplit(
 
 /**
  * 書き出しの対話で、次にアプリが返す文。
- * 何を聞くか(段階)はルールが決め、AIは文面だけを本人の話に寄せる。
+ * 「何を確かめるか」はルールが決め、AIは文面だけを本人の話に寄せる。
  * 返らなければ定型文をそのまま使うので、会話は止まらない。
  */
-export async function assistBrainstorm(state: BrainstormState): Promise<string> {
-  const fallback = nextPrompt(state);
+export async function assistBrainstorm(state: BrainstormState, prompt: Prompt): Promise<string> {
   const ai = await post<BrainstormResult>({
     task: "brainstorm",
     turns: state.turns,
-    stage: stageOf(state),
-    fallback,
+    intent: prompt.intent,
+    fallback: prompt.text,
+    covered: coveredTopics(state),
     candidates: state.candidates.map((c) => c.text),
   });
   const text = ai?.text?.trim();
-  if (!text || text.length > 200) return fallback;
+  if (!text || text.length > 200) return prompt.text;
   return text;
 }

@@ -1,42 +1,75 @@
 // 書き出しの対話のテスト。
-// 助言をしないこと、段階が進むこと、候補が会話全体から取れることを固定する。
+// 一番の目的は「同じことを二度聞かない」を固定すること。
+// 文面で既出を判定していた実装は、AIが言い換えた瞬間に判定が崩れ、
+// 同じ問いを永久に返していた。
 
 import { describe, it, expect } from "vitest";
 import {
-  addAppTurn, addUserTurn, emptyBrainstorm, nextPrompt,
-  readyToDecide, stageOf, transcript,
+  addAppTurn, addUserTurn, coveredTopics, emptyBrainstorm, nextPrompt,
+  readyToDecide, transcript, type BrainstormState,
 } from "../src/lib/brainstorm";
 
-describe("会話の段階", () => {
-  it("最初は出してもらう段階", () => {
-    expect(stageOf(emptyBrainstorm())).toBe("SPREAD");
-    expect(nextPrompt(emptyBrainstorm())).toContain("そのまま話して");
+/** 実際の会話のように、問いを出して答えるを繰り返す */
+function converse(said: string[], rewriteByAi = false): BrainstormState {
+  let s = emptyBrainstorm();
+  const opening = nextPrompt(s)!;
+  s = addAppTurn(s, opening.text, opening.key);
+  for (const text of said) {
+    s = addUserTurn(s, text);
+    const p = nextPrompt(s);
+    if (!p) break;
+    // AIが文面を書き換えても、キーで既出が分かること
+    s = addAppTurn(s, rewriteByAi ? `${p.text}(AIが言い換えた文)` : p.text, p.key);
+  }
+  return s;
+}
+
+describe("同じことを二度聞かない", () => {
+  it("受入テスト: AIが文面を書き換えても、同じ問いに戻らない", () => {
+    const s = converse(
+      ["出資の件、リマインドするか迷ってる", "他にはない", "出来ればリマインドして出資してほしい", "出資してもらう結果", "分からない"],
+      true
+    );
+    const asked = s.turns.filter((t) => t.from === "APP").map((t) => t.text);
+    expect(new Set(asked).size).toBe(asked.length);
   });
 
-  it("候補が複数見つかったら、絞る段階に進む", () => {
-    let s = addUserTurn(emptyBrainstorm(), "犬を飼うかどうか迷ってる。");
-    s = addUserTurn(s, "転職するかどうかも決めきれない。");
-    expect(s.candidates.length).toBeGreaterThanOrEqual(2);
-    expect(stageOf(s)).toBe("NARROW");
-    expect(nextPrompt(s)).toContain("いちばん");
+  it("同じキーは記録に二度入らない", () => {
+    let s = addAppTurn(emptyBrainstorm(), "問い", "deadline");
+    s = addAppTurn(s, "言い換えた問い", "deadline");
+    expect(s.asked).toEqual(["deadline"]);
   });
 
-  it("候補が1つに寄れば、期限や決定権を確かめる段階になる", () => {
-    let s = addUserTurn(emptyBrainstorm(), "犬を飼うかどうか迷ってる。");
-    s = addUserTurn(s, "世話の分担が気になっている。");
-    expect(s.candidates).toHaveLength(1);
-    expect(stageOf(s)).toBe("SHARPEN");
+  it("聞いた問いは、次の候補から外れる", () => {
+    let s = addUserTurn(emptyBrainstorm(), "犬を飼うか迷う");
+    const first = nextPrompt(s)!;
+    s = addAppTurn(s, first.text, first.key);
+    expect(nextPrompt(s)?.key).not.toBe(first.key);
   });
+});
 
-  it("同じ問いを続けて出さない", () => {
-    let s = emptyBrainstorm();
-    const asked: string[] = [];
-    for (let i = 0; i < 3; i++) {
-      const q = nextPrompt(s);
-      asked.push(q);
-      s = addAppTurn(addUserTurn(s, `思いつくこと${i}`), q);
+describe("会話が前へ進む", () => {
+  it("問いを出し切ったら null を返し、締めへ移る", () => {
+    let s = converse(["犬を飼うか迷う", "転職も決めきれない", "犬の方", "今週まで", "自分で決められる", "不安だから", "何も進まない"]);
+    // 残りの問いも消費する
+    for (let i = 0; i < 10; i++) {
+      const p = nextPrompt(s);
+      if (!p) break;
+      s = addAppTurn(addUserTurn(s, `答え${i}`), p.text, p.key);
     }
-    expect(new Set(asked).size).toBeGreaterThan(1);
+    expect(nextPrompt(s)).toBeNull();
+  });
+
+  it("候補が2件以上あれば、どれが本命かを聞く段に入る", () => {
+    const s = converse(["犬を飼うかどうか迷ってる", "転職するかどうかも決めきれない"]);
+    expect(s.asked).toContain("pick");
+  });
+
+  it("候補が出ていないうちは、絞る問いを出さない", () => {
+    let s = addUserTurn(emptyBrainstorm(), "うーん、特にないかな");
+    expect(nextPrompt(s)?.key).not.toBe("pick");
+    s = addUserTurn(s, "強いて言えば疲れている");
+    expect(nextPrompt(s)?.key).not.toBe("pick");
   });
 });
 
@@ -50,12 +83,20 @@ describe("候補の抽出", () => {
 
   it("本人の発言だけが本文になる(アプリの問いは混ぜない)", () => {
     let s = addUserTurn(emptyBrainstorm(), "犬を飼うか迷う");
-    s = addAppTurn(s, "他にも引っかかっていることはありますか?");
+    s = addAppTurn(s, "他にも引っかかっていることはありますか?", "more");
     expect(transcript(s)).toBe("犬を飼うか迷う");
   });
 
   it("空の発言は無視する", () => {
     expect(addUserTurn(emptyBrainstorm(), "   ").turns).toHaveLength(0);
+  });
+});
+
+describe("AIへ渡す情報", () => {
+  it("すでに確かめたことを、言葉にして渡せる", () => {
+    let s = addAppTurn(emptyBrainstorm(), "いつまでに?", "deadline");
+    s = addAppTurn(s, "誰が決める?", "owner");
+    expect(coveredTopics(s)).toEqual(["決断の期限を確かめる", "決定権が本人にあるかを確かめる"]);
   });
 });
 
@@ -69,14 +110,15 @@ describe("次に進めるか", () => {
 });
 
 describe("助言をしない(役割の線引き)", () => {
-  it("定型文はすべて問いで終わるか、話すよう促す文である", () => {
-    let s = emptyBrainstorm();
+  it("すべての定型文が、助言ではなく問いになっている", () => {
     const advice = /した方(がいい|が良い)|すべきです|おすすめ|良いと思います|正解/;
+    let s = emptyBrainstorm();
     for (let i = 0; i < 12; i++) {
-      const q = nextPrompt(s);
-      expect(q, q).not.toMatch(advice);
-      expect(/[?？。]$/.test(q), q).toBe(true);
-      s = addAppTurn(addUserTurn(s, `犬を飼うかどうか${i}`), q);
+      const p = nextPrompt(s);
+      if (!p) break;
+      expect(p.text, p.text).not.toMatch(advice);
+      expect(/[?？。]$/.test(p.text), p.text).toBe(true);
+      s = addAppTurn(addUserTurn(s, `犬を飼うかどうか${i}`), p.text, p.key);
     }
   });
 });

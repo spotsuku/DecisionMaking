@@ -16,6 +16,7 @@ import {
   addUserTurn,
   emptyBrainstorm,
   nextPrompt,
+  closingText,
   readyToDecide,
   transcript,
   type BrainstormState,
@@ -45,7 +46,12 @@ export default function JournalPage() {
       // 受け取れなくても、その場で書けばよい
     }
     if (seed) void send(seed);
-    else setState((s) => (s.turns.length === 0 ? addAppTurn(s, nextPrompt(s)) : s));
+    else
+      setState((s) => {
+        if (s.turns.length > 0) return s;
+        const opening = nextPrompt(s);
+        return opening ? addAppTurn(s, opening.text, opening.key) : s;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,12 +80,14 @@ export default function JournalPage() {
       if (savedRef.current) store.updateJournalEntry(savedRef.current, body);
       else savedRef.current = store.addJournalEntry(body).id;
 
+      // 何を確かめるかはルールが決める。出し切っていれば締めて、決断へ渡す
+      const prompt = nextPrompt(withUser);
       const [reply, candidates] = await Promise.all([
-        assistBrainstorm(withUser),
+        prompt ? assistBrainstorm(withUser, prompt) : Promise.resolve(closingText),
         assistExtract(body),
       ]);
       setExtra(candidates);
-      setState((s) => addAppTurn(s, reply));
+      setState((s) => addAppTurn(s, reply, prompt?.key));
     } finally {
       setThinking(false);
     }

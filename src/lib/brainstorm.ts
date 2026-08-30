@@ -2,11 +2,14 @@
 //
 // 役割の線引きは診断と同じ:
 //   このアプリは答えを出さない。助言もしない。
-//   本人が言ったことを受け止めて、次の一手が見える問いを1つだけ返す。
-//   決めるべきことが見えてきたら、候補として並べる。選ぶのは本人(INV-05)。
+//   まだ分かっていないことを1つずつ聞き、決めるべきことを一緒に浮かび上がらせる。
+//   決めるのは本人(INV-05)。
 //
-// ここはルールベースの土台。AIがあれば文面だけ差し替わるが、
-// 「次に何を聞くか」の判断はここが持つ。
+// 設計の要点:
+//   聞いた問いは「キー」で覚える。文面ではなくキーで管理しないと、
+//   AIが言い換えた瞬間に「もう聞いた」が分からなくなり、同じことを永久に聞き続ける。
+//   問いは順序つきの一覧で、条件を満たす未使用のものを上から選ぶ。
+//   出し切ったら null を返し、会話を閉じて決断へ渡す。
 
 import { extractCandidates, type Candidate } from "./journal";
 
@@ -15,91 +18,133 @@ export interface Turn {
   text: string;
 }
 
-/** 会話の段階。順に深くしていく */
-export type Stage =
-  /** まだ量が足りない。とにかく出してもらう */
-  | "SPREAD"
-  /** 複数出てきた。どれが本命かを絞る */
-  | "NARROW"
-  /** 1つに寄ってきた。決断として立てられるか確かめる */
-  | "SHARPEN";
-
 export interface BrainstormState {
   turns: Turn[];
   /** これまでに見つかった決断候補 */
   candidates: Candidate[];
+  /** すでに聞いた問いのキー。同じことは二度聞かない */
+  asked: string[];
 }
 
-export const emptyBrainstorm = (): BrainstormState => ({ turns: [], candidates: [] });
+export const emptyBrainstorm = (): BrainstormState => ({ turns: [], candidates: [], asked: [] });
 
 /** 会話全体の本文(候補の抽出はここに対して行う) */
 export function transcript(state: BrainstormState): string {
   return state.turns.filter((t) => t.from === "USER").map((t) => t.text).join("\n");
 }
 
-const OPENING =
-  "いま頭にあることを、そのまま話してみてください。まとまっていなくて大丈夫です。";
+const userTurns = (s: BrainstormState) => s.turns.filter((t) => t.from === "USER").length;
 
-/** 段階ごとの問い。同じ問いを続けて出さないよう、使った数で選ぶ */
-const PROMPTS: Record<Stage, string[]> = {
-  SPREAD: [
-    "他にも、頭の片隅に引っかかっていることはありますか?",
-    "仕事以外ではどうですか。家のこと、お金のこと、体のこと。",
-    "「そのうちやろう」と思ったまま、手をつけていないことはありますか?",
-    "最近、返事や連絡を保留にしているものはありますか?",
-  ],
-  NARROW: [
-    "この中で、いちばん引っかかっているのはどれですか?",
-    "どれか1つが片づくとしたら、どれがいちばん楽になりますか?",
-    "放っておくと、いちばん困ることになるのはどれですか?",
-  ],
-  SHARPEN: [
-    "それは、いつまでに決まっていないと困りますか?",
-    "決めきれないのは、情報が足りないからですか。それとも決めたあとが不安だからですか?",
-    "その件、あなた一人で決められますか。それとも誰かの合意が要りますか?",
-  ],
-};
-
-export function stageOf(state: BrainstormState): Stage {
-  const said = state.turns.filter((t) => t.from === "USER").length;
-  const found = state.candidates.length;
-  if (found === 0 || said < 2) return "SPREAD";
-  if (found >= 2) return "NARROW";
-  return "SHARPEN";
+export interface Prompt {
+  key: string;
+  /** AIに渡す「この問いで何を確かめたいか」。文面の言い換えはAIに任せる */
+  intent: string;
+  text: string;
+  /** この問いを出してよい条件 */
+  when: (s: BrainstormState) => boolean;
 }
 
 /**
- * 次にアプリが返す文を決める。
- * 受け止め(本人の言葉を1つ拾う)+ 問い1つ。助言はしない。
+ * 上から順に、条件を満たす未使用の問いを選ぶ。
+ * 前半は広げる問い、後半は1件に寄せてから輪郭を確かめる問い。
  */
-export function nextPrompt(state: BrainstormState): string {
+const PROMPTS: Prompt[] = [
+  {
+    key: "more",
+    intent: "他に抱えている決めごとを引き出す",
+    text: "他にも、頭の片隅に引っかかっていることはありますか?",
+    when: (s) => userTurns(s) < 3,
+  },
+  {
+    key: "other_area",
+    intent: "仕事以外の領域からも引き出す",
+    text: "仕事以外ではどうですか。家のこと、お金のこと、体のこと。",
+    when: (s) => s.candidates.length < 2 && userTurns(s) < 4,
+  },
+  {
+    key: "pick",
+    intent: "複数出てきた中から、本命を本人に選ばせる",
+    text: "この中で、いちばん引っかかっているのはどれですか?",
+    when: (s) => s.candidates.length >= 2,
+  },
+  {
+    key: "deadline",
+    intent: "決断の期限を確かめる",
+    text: "それは、いつまでに決まっていないと困りますか?",
+    when: () => true,
+  },
+  {
+    key: "owner",
+    intent: "決定権が本人にあるかを確かめる",
+    text: "その件、あなた一人で決められますか。それとも誰かの合意が要りますか?",
+    when: () => true,
+  },
+  {
+    key: "blocker",
+    intent: "詰まりの正体が情報不足か、決めた後への不安かを分ける",
+    text: "決めきれないのは、情報が足りないからですか。それとも決めたあとが不安だからですか?",
+    when: () => true,
+  },
+  {
+    key: "cost",
+    intent: "決めずに置いた場合の損失を意識してもらう",
+    text: "このまま決めずに置いておくと、何が起きますか?",
+    when: () => true,
+  },
+];
+
+const OPENING: Prompt = {
+  key: "opening",
+  intent: "まず出してもらう",
+  text: "いま頭にあることを、そのまま話してみてください。まとまっていなくて大丈夫です。",
+  when: () => true,
+};
+
+const CLOSING =
+  "ひと通り出ましたね。下に並んだ中から、いま決めるものを1つ選んでください。まだ話したければ続けても大丈夫です。";
+
+/**
+ * 次の問いを返す。出し切っていれば null。
+ * 文面ではなくキーで既出を判定するので、AIが言い換えても重複しない。
+ */
+export function nextPrompt(state: BrainstormState): Prompt | null {
   if (state.turns.length === 0) return OPENING;
-  const stage = stageOf(state);
-  const pool = PROMPTS[stage];
-  // その段階で何回聞いたかで回す。同じ文を続けない
-  const asked = state.turns.filter((t) => t.from === "APP" && pool.includes(t.text)).length;
-  return pool[asked % pool.length];
+  const asked = new Set(state.asked);
+  return PROMPTS.find((p) => !asked.has(p.key) && p.when(state)) ?? null;
 }
+
+/** 出し切ったあとに出す締めの文 */
+export const closingText = CLOSING;
 
 /** 会話全体から決断候補を取り直す(あとの発言で表現が整うことがある) */
 export function refreshCandidates(state: BrainstormState): Candidate[] {
   return extractCandidates(transcript(state));
 }
 
-/** 本人の発言を1つ足して、候補と次の問いを更新する */
+/** 本人の発言を1つ足して、候補を取り直す */
 export function addUserTurn(state: BrainstormState, said: string): BrainstormState {
   const text = said.trim();
   if (!text) return state;
-  const next: BrainstormState = { turns: [...state.turns, { from: "USER", text }], candidates: [] };
-  next.candidates = refreshCandidates(next);
-  return next;
+  const next: BrainstormState = { ...state, turns: [...state.turns, { from: "USER", text }] };
+  return { ...next, candidates: refreshCandidates(next) };
 }
 
-export function addAppTurn(state: BrainstormState, text: string): BrainstormState {
-  return { ...state, turns: [...state.turns, { from: "APP", text }] };
+/** アプリの発言を足す。キーを渡すと「聞いた」として記録する */
+export function addAppTurn(state: BrainstormState, text: string, key?: string): BrainstormState {
+  return {
+    ...state,
+    turns: [...state.turns, { from: "APP", text }],
+    asked: key && !state.asked.includes(key) ? [...state.asked, key] : state.asked,
+  };
 }
 
-/** もう十分に出た、と伝えてよいか */
+/** 決断へ進める状態か */
 export function readyToDecide(state: BrainstormState): boolean {
-  return state.candidates.length > 0 && state.turns.filter((t) => t.from === "USER").length >= 2;
+  return state.candidates.length > 0 && userTurns(state) >= 2;
+}
+
+/** すでに確かめたことを、AIへ渡すための言葉にする */
+export function coveredTopics(state: BrainstormState): string[] {
+  const byKey = new Map([...PROMPTS, OPENING].map((p) => [p.key, p.intent]));
+  return state.asked.map((k) => byKey.get(k) ?? k);
 }
