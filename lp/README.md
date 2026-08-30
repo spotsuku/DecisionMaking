@@ -16,6 +16,16 @@ npm run dev     # http://localhost:3000
 npm run build   # 静的出力 → out/
 ```
 
+## アプリへのリンク
+
+LP内の「無料で始める」などはすべてアプリ本体へのリンク。URLは `app/site.ts` の
+1か所で持っている。独自ドメインを当てたら、Vercelの環境変数
+`NEXT_PUBLIC_APP_URL`(例: `https://app.example.com`)を設定すれば全リンクが
+切り替わる。静的出力なので、値はビルド時に埋め込まれる(再デプロイが必要)。
+
+利用規約・プライバシーポリシー・特定商取引法に基づく表記はアプリ側にあるので、
+フッターからそこへ渡している。
+
 ## Vercel
 
 - Framework Preset: Next.js / Root Directory: `lp` / Install: `npm ci` / Build: `npm run build`

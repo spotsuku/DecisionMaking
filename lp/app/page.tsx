@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { app } from "./site";
 
 const evidence = [
   { n:"01", insight:"先延ばしは、感情の問題である", detail:"人は時間がないからではなく、考えると生じる不快感を避けるために先延ばしする。", source:"Sirois & Pychyl", href:"https://core.ac.uk/download/pdf/42613080.pdf" },
@@ -24,7 +25,7 @@ export default function Home() {
   const reset=()=>{setStarted(false);setQuestion(0);setAnswers([])};
 
   return <main>
-    <header className="nav"><a href="#top" className="brand">DECISION MAKING</a><button className="navCta" onClick={scrollToDemo}>無料で試す <span>↗</span></button></header>
+    <header className="nav"><a href="#top" className="brand">DECISION MAKING</a><a className="navCta" href={app()}>無料で始める <span>→</span></a></header>
 
     <section id="top" className="hero">
       <div className="heroGrid" aria-hidden="true"/>
@@ -32,8 +33,9 @@ export default function Home() {
         <p className="eyebrow">DECISION MAKING APP</p>
         <h1>決めろ。</h1>
         <p className="heroDescription">問い・判断基準・選択肢を整理し、<strong>24時間以内の最初の行動</strong>まで決める。自分の人生と仕事を、自分で前に進めるための意思決定アプリです。</p>
-        <button className="primary" onClick={scrollToDemo}>無料で意思決定してみる <span>→</span></button>
-        <p className="microcopy">決断2件まで無料・カード不要</p>
+        <a className="primary" href={app()}>無料で意思決定してみる <span>→</span></a>
+        <p className="microcopy">決断2件まで無料・カード不要・登録なしで書き出せます</p>
+        <button className="ghostLink" onClick={scrollToDemo}>先に3つの質問で試す →</button>
       </div>
       <div className="phoneWrap"><div className="phoneIntro"><span>決断力を高めるアプリ</span><strong>Decision Making</strong></div><div className="shotFrame"><img src="/app/journal.webp" width={640} height={1385} fetchPriority="high" decoding="async" alt="迷っていることを話すと、決めるべきことが候補として挙がってくる書き出し画面" /></div><p className="shotCap">迷っていることを話すだけ。決めるべきことは、アプリが拾います。</p></div>
     </section>
@@ -68,9 +70,9 @@ export default function Home() {
 
     <section className="quoteFeature jobsFeature" aria-labelledby="jobs-quote"><figure className="quotePortrait"><img src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Steve_Jobs_Headshot_2010-CROP2.jpg?width=1200" alt="スティーブ・ジョブズ"/><figcaption><strong>STEVE JOBS</strong><span>APPLE CO-FOUNDER</span><a href="https://commons.wikimedia.org/wiki/File:Steve_Jobs_Headshot_2010-CROP2.jpg" target="_blank" rel="noreferrer">PHOTO: MATTHEW YOHE / CC BY-SA 3.0 ↗</a></figcaption></figure><div className="quoteCopy"><p className="sectionNo">STANFORD COMMENCEMENT, 2005</p><blockquote id="jobs-quote"><span>Have the courage<br/>to follow your heart<br/>and intuition.</span><strong>自分の心と直感に従う<br/>勇気を持ちなさい。</strong></blockquote></div></section>
 
-    <section id="demo" className="demo section">{!started?<div className="demoIntro"><p className="sectionNo red">05 — TRY THE APP</p><h2>3つの質問で、<br/>使い心地を試す。</h2><p>いま抱えている意思決定をひとつ思い浮かべてください。答えを出すのではなく、何が決断を止めているかを整理します。</p><button className="primary" onClick={()=>setStarted(true)}>意思決定してみる <span>→</span></button></div>:answers.length<questions.length?<div className="questionPanel"><div className="trialProgress"><span>0{question+1}</span><i><b style={{width:`${((question+1)/questions.length)*100}%`}}/></i><small>0{questions.length}</small></div><p className="sectionNo red">{questions[question].label}</p><h2>{questions[question].title}</h2><div className="answerGrid">{questions[question].answers.map(answer=><button onClick={()=>choose(answer)} key={answer}>{answer}<span>→</span></button>)}</div></div>:<div className="resultPanel" aria-live="polite"><p className="sectionNo red">YOUR NEXT STEP</p><h2>次は、あなたの判断基準を言葉にします。</h2><p>今回の回答から、最初に整理すべきなのは<strong>「{answers[1]}」</strong>です。製品版では、選択肢の整理、決断の確定、24時間以内の行動まで進みます。</p><button className="primary">無料で続きを始める <span>→</span></button><button className="reset" onClick={reset}>別の意思決定で試す</button></div>}</section>
+    <section id="demo" className="demo section">{!started?<div className="demoIntro"><p className="sectionNo red">05 — TRY THE APP</p><h2>3つの質問で、<br/>使い心地を試す。</h2><p>いま抱えている意思決定をひとつ思い浮かべてください。答えを出すのではなく、何が決断を止めているかを整理します。</p><button className="primary" onClick={()=>setStarted(true)}>意思決定してみる <span>→</span></button></div>:answers.length<questions.length?<div className="questionPanel"><div className="trialProgress"><span>0{question+1}</span><i><b style={{width:`${((question+1)/questions.length)*100}%`}}/></i><small>0{questions.length}</small></div><p className="sectionNo red">{questions[question].label}</p><h2>{questions[question].title}</h2><div className="answerGrid">{questions[question].answers.map(answer=><button onClick={()=>choose(answer)} key={answer}>{answer}<span>→</span></button>)}</div></div>:<div className="resultPanel" aria-live="polite"><p className="sectionNo red">YOUR NEXT STEP</p><h2>次は、あなたの判断基準を言葉にします。</h2><p>今回の回答から、最初に整理すべきなのは<strong>「{answers[1]}」</strong>です。製品版では、選択肢の整理、決断の確定、24時間以内の行動まで進みます。</p><a className="primary" href={app()}>無料で続きを始める <span>→</span></a><button className="reset" onClick={reset}>別の意思決定で試す</button></div>}</section>
 
-    <section className="pricing section"><p className="sectionNo">06 — START</p><div className="pricingCopy"><h2><span>自分の人生と仕事を、</span><span>自分で決めて</span><span>進め。</span></h2><p>最初の3件は無料。決断を記録し、行動と振り返りまで試せます。</p></div><div className="priceCard"><span>FREE</span><strong>¥0</strong><ul><li>決断2件まで(累計)</li><li>書き出しと診断はすべて利用可</li><li>Decision Card・最初の行動</li><li>結果の振り返り</li></ul><p className="priceNext">3件目からは スタンダード <b>¥1,480/月</b>(毎月10件・超過は1件¥180)</p><button onClick={scrollToDemo}>無料で始める <b>→</b></button></div></section>
-    <footer className="footer"><strong>DECISION MAKING</strong><span>© 2026 Decision Making</span></footer>
+    <section className="pricing section"><p className="sectionNo">06 — START</p><div className="pricingCopy"><h2><span>自分の人生と仕事を、</span><span>自分で決めて</span><span>進め。</span></h2><p>最初の3件は無料。決断を記録し、行動と振り返りまで試せます。</p></div><div className="priceCard"><span>FREE</span><strong>¥0</strong><ul><li>決断2件まで(累計)</li><li>書き出しと診断はすべて利用可</li><li>Decision Card・最初の行動</li><li>結果の振り返り</li></ul><p className="priceNext">3件目からは スタンダード <b>¥1,480/月</b>(毎月10件・超過は1件¥180)</p><a className="priceCta" href={app()}>無料で始める <b>→</b></a></div></section>
+    <footer className="footer"><strong>DECISION MAKING</strong><nav className="footerLinks"><a href={app()}>アプリを開く</a><a href={app("/plans")}>料金</a><a href={app("/legal/terms")}>利用規約</a><a href={app("/legal/privacy")}>プライバシーポリシー</a><a href={app("/legal/tokushoho")}>特定商取引法に基づく表記</a></nav><span>© 2026 Decision Making</span></footer>
   </main>;
 }

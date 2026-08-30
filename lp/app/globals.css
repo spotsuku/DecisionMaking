@@ -88,3 +88,15 @@
   .compare strong{margin-top:16px}
   .compare > div > span{font-size:13px}
 }
+
+/* LPからアプリへの導線。押す場所はボタンの見た目のまま、実体はリンクにする
+   (新しいタブで開けて、検索エンジンにも辿れる) */
+a.primary{align-items:center;text-decoration:none}
+.priceCard .priceCta{width:100%;background:var(--red);color:#fff;padding:18px;display:flex;justify-content:space-between;align-items:center;font-weight:900;margin-top:22px}
+/* ページ内のお試し(3問)へ。主ボタンの脇に置く控えめな導線 */
+.ghostLink{display:inline-block;margin-top:14px;padding:0;border:0;background:none;color:#9a9a9a;font-size:13px;text-decoration:underline;text-underline-offset:5px}
+.ghostLink:hover{color:#fff}
+/* フッター。規約類はアプリ側に置いてあるので、そこへ渡す */
+.footerLinks{display:flex;flex-wrap:wrap;gap:8px 20px}
+.footerLinks a{color:#bdbdbd;text-decoration:underline;text-underline-offset:4px}
+.footerLinks a:hover{color:#fff}
