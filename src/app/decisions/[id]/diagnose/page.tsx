@@ -422,27 +422,27 @@ export default function DiagnosePage() {
           ) : (
             <div className="card strong">
               <p className="card-meta" style={{ marginTop: 0, lineHeight: 1.8 }}>
-                終わったものにチェックを入れてください。3つそろえば、決められます。
+                終えたものにチェックを入れてください。3つそろえば、決められます。
               </p>
-              <label className="check-row">
+              <label className={factsMissing ? "check-row" : "check-row done"}>
                 <input type="checkbox" checked={!factsMissing} onChange={(e) => setFactsMissing(!e.target.checked)} />
                 <span>
-                  確かめられる事実は、確かめ終わった
-                  {factsMissing && <><br /><span className="card-meta">残っているなら → 調べることと期限を決める</span></>}
+                  確認すれば分かる事実は、網羅した
+                  <br /><span className="card-meta">残っているなら → RESEARCH: 調査項目と期限を決める</span>
                 </span>
               </label>
-              <label className="check-row">
+              <label className={needsAsk ? "check-row" : "check-row done"}>
                 <input type="checkbox" checked={!needsAsk} onChange={(e) => setNeedsAsk(!e.target.checked)} />
                 <span>
-                  聞くべき人には、聞いた
-                  {needsAsk && <><br /><span className="card-meta">残っているなら → 誰に何を聞くかを決める</span></>}
+                  経験者・権限を持つ人に聞き尽くした
+                  <br /><span className="card-meta">残っているなら → ASK: 誰に何を聞くかを決める</span>
                 </span>
               </label>
-              <label className="check-row">
+              <label className={testable ? "check-row" : "check-row done"}>
                 <input type="checkbox" checked={!testable} onChange={(e) => setTestable(!e.target.checked)} />
                 <span>
-                  小さく試して分かることは、試した
-                  {testable && <><br /><span className="card-meta">残っているなら → 最小の実験と損失上限を決める</span></>}
+                  考えて確定しないことを小さく試した
+                  <br /><span className="card-meta">残っているなら → TEST: 最小実験と損失上限を決める</span>
                 </span>
               </label>
 
@@ -453,8 +453,8 @@ export default function DiagnosePage() {
                   <label className="check-row">
                     <input type="checkbox" checked={unknowable} onChange={(e) => setUnknowable(e.target.checked)} />
                     <span>
-                      残りは、調べても試しても誰にも分からない
-                      <br /><span className="card-meta">それでも決めるなら → 仮説と撤退条件を決めて賭ける</span>
+                      残りは、調べても試しても、誰にも分からない
+                      <br /><span className="card-meta">それでも決めるなら → BET: 仮説と撤退条件を決めて賭ける</span>
                     </span>
                   </label>
                 </div>

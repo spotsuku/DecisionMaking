@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { store } from "@/lib/store";
 import type { Decision, DecisionVersion } from "@/lib/types";
+import { DateField } from "@/components/DateField";
 
 export function FramePanel({ decision, version }: { decision: Decision; version: DecisionVersion }) {
   const locked = !!version.committedAt;
@@ -44,7 +45,7 @@ export function FramePanel({ decision, version }: { decision: Decision; version:
         </div>
         <div className="field">
           <label>いつまでに決めますか<span className="req">*</span></label>
-          <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+          <DateField value={dueAt} onChange={setDueAt} placeholder="日付を選ぶ" />
         </div>
       </div>
       <button

@@ -168,7 +168,7 @@ export default function JournalPage() {
         onSend={() => void send(draft)}
         sending={thinking}
         sendLabel="話す"
-        placeholder="思いつくまま。まとまっていなくて大丈夫です"
+        placeholder="思いつくまま話してください"
       />
       <div ref={endRef} />
 

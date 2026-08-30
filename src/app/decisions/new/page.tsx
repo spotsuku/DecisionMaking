@@ -9,6 +9,7 @@ import { checkStart, recordOverage } from "@/lib/billing";
 import { PLANS } from "@/lib/plan";
 import { DOMAIN_LABEL, type DomainCode } from "@/lib/types";
 import { IconBack } from "@/components/icons";
+import { DateField } from "@/components/DateField";
 
 export default function NewDecisionPage() {
   const router = useRouter();
@@ -110,7 +111,7 @@ export default function NewDecisionPage() {
       <div className="form-grid">
         <div className="field">
           <label>決断期限</label>
-          <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+          <DateField value={dueAt} onChange={setDueAt} placeholder="日付を選ぶ" />
         </div>
         <div className="field">
           <label>領域</label>

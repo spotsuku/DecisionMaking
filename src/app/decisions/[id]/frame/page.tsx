@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useDecision } from "@/lib/useDecision";
 import { store } from "@/lib/store";
 import { IconBack } from "@/components/icons";
+import { DateField } from "@/components/DateField";
 
 export default function FramePage() {
   const router = useRouter();
@@ -67,7 +68,7 @@ export default function FramePage() {
 
           <div className="field" style={{ marginTop: 14 }}>
             <label>いつまでに決めますか<span className="req">*</span></label>
-            <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+            <DateField value={dueAt} onChange={setDueAt} placeholder="日付を選ぶ" />
             <div className="hint">この日を過ぎても決まっていなければ、ホームに出てきます。</div>
           </div>
 

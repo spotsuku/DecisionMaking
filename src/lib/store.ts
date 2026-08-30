@@ -119,7 +119,10 @@ class Store {
     return this.snapshotCache;
   };
 
-  getServerSnapshot = (): DB => emptyDB();
+  // サーバー描画時の中身。毎回新しく作るとReactが変化とみなして描き直し続けるので、
+  // 同じものを返す(サーバーには保存された記録がない)
+  private readonly serverSnapshot: DB = emptyDB();
+  getServerSnapshot = (): DB => this.serverSnapshot;
 
   private audit(entityType: string, entityId: string, eventType: string, payloadSummary = "") {
     this.db.audit.push({ id: uid(), entityType, entityId, eventType, payloadSummary, createdAt: now() });

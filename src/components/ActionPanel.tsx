@@ -7,6 +7,7 @@ import { useDB, fmtDate, fmtDateTime, isOverdue } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { detectDrift } from "@/lib/drift";
 import type { ActionRole, Decision, DecisionVersion } from "@/lib/types";
+import { DateField } from "@/components/DateField";
 
 const ROLE_LABEL: Record<ActionRole, string> = {
   ADVANCE: "前進",
@@ -114,7 +115,7 @@ export function ActionPanel({ decision, version }: { decision: Decision; version
               </div>
               <div className="field">
                 <label>期限</label>
-                <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                <DateField value={dueAt} onChange={setDueAt} placeholder="日付を選ぶ" />
               </div>
             </div>
             <div className="field">

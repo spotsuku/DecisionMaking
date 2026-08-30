@@ -11,6 +11,7 @@ import { store } from "@/lib/store";
 import { useAuth, needsAccount } from "@/lib/auth";
 import { evaluateCommitGate } from "@/lib/stateMachine";
 import { IconBack } from "@/components/icons";
+import { DateField } from "@/components/DateField";
 
 const STEPS = ["選択", "両面予測", "引き受けるもの", "最小行動", "確定"];
 
@@ -222,7 +223,7 @@ export default function CommitWizardPage() {
             </div>
             <div className="form-grid">
               <div className="field"><label>実現確率 %</label><input type="number" min={1} max={99} value={posProb} onChange={(e) => setPosProb(Number(e.target.value))} /></div>
-              <div className="field"><label>観測期限<span className="req">*</span></label><input type="date" value={posHorizon} onChange={(e) => setPosHorizon(e.target.value)} /></div>
+              <div className="field"><label>観測期限<span className="req">*</span></label><DateField value={posHorizon} onChange={setPosHorizon} /></div>
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>先行指標</label>
@@ -267,7 +268,7 @@ export default function CommitWizardPage() {
           </div>
           <div className="field">
             <label>レビュー日<span className="req">*</span></label>
-            <input type="date" value={reviewAt} onChange={(e) => setReviewAt(e.target.value)} />
+            <DateField value={reviewAt} onChange={setReviewAt} />
             <div className="hint">短期は7日後、中期は30日後が目安。予測と実績をこの日に比較します。</div>
           </div>
           <button className="btn primary" disabled={!tradeoff.trim() || !reviewAt} onClick={() => setStep(3)}>次へ: 最小行動</button>
@@ -283,7 +284,7 @@ export default function CommitWizardPage() {
           </div>
           <div className="field">
             <label>行動期限<span className="req">*</span></label>
-            <input type="date" value={actionDue} onChange={(e) => setActionDue(e.target.value)} />
+            <DateField value={actionDue} onChange={setActionDue} />
           </div>
           <div className="field">
             <label>リスク低減行動(任意)</label>

@@ -55,11 +55,12 @@ button { font-family: var(--font); }
   gap: 12px;
   padding: 22px 0 12px;
 }
+/* 指で押す場所は44px角を下回らせない(transformで縮めると当たり判定ごと縮む) */
 .appbar .back {
   width: 44px; height: 44px; margin-left: -10px;
   display: flex; align-items: center; justify-content: center; flex: none;
   border-radius: 50%; background: var(--surface); border: none; cursor: pointer;
-  color: var(--ink); transform: scale(0.85);
+  color: var(--ink);
 }
 .appbar .title { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
 .appbar-action {
@@ -123,7 +124,7 @@ button { font-family: var(--font); }
 .jbox textarea {
   display: block; width: 100%; border: none; background: transparent; resize: none;
   padding: 0; padding-right: 44px; min-height: 96px;
-  font-family: var(--font); font-size: 14.5px; line-height: 1.9; color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.9; color: var(--ink);
 }
 .jbox textarea:focus { outline: none; }
 .jbox textarea::placeholder { color: var(--ink-faint); }
@@ -239,15 +240,52 @@ button { font-family: var(--font); }
 .field .hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 5px; padding-left: 2px; }
 .req { color: var(--accent); margin-left: 3px; }
 
-input[type="text"], input[type="date"], input[type="datetime-local"],
+input[type="text"], input[type="email"], input[type="tel"], input[type="url"],
+input[type="date"], input[type="datetime-local"],
 input[type="number"], textarea, select {
-  width: 100%; font-family: var(--font); font-size: 15px;
+  width: 100%; font-family: var(--font);
+  /* 16px未満だと iOS Safari は入力欄をタップした瞬間に画面を拡大する。
+     拡大されたままだと以降のレイアウトが横にずれるので、16pxを下回らせない */
+  font-size: 16px; line-height: 1.5;
   padding: 12px 15px; min-height: 48px;
   border: none; border-radius: var(--r-input);
   background: var(--surface); color: var(--ink);
+  /* 端末ごとの既定の見た目(iOSの白いセレクトなど)を止め、どこでも同じ箱にする */
+  -webkit-appearance: none; appearance: none;
 }
 textarea { resize: vertical; min-height: 96px; }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+
+/* 既定の見た目を消したぶん、下向きの印は自分で描く */
+select {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2378726b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 15px center; background-size: 12px 8px;
+}
+/* 1行の入力欄は高さを揃える。日付欄はカレンダーの印のぶんだけ背が高くなり、
+   横に並べたときに下端がずれる */
+input[type="text"], input[type="email"], input[type="tel"], input[type="url"],
+input[type="date"], input[type="datetime-local"],
+input[type="number"], select { height: 48px; }
+
+/* 日付: iOSは中身を中央に寄せるので、他の欄と同じ左揃えに戻す */
+input[type="date"], input[type="datetime-local"] { text-align: left; }
+input[type="date"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
+input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.45; }
+
+/* 未入力の日付欄は、端末によって空の箱に見えたり(iOS)、
+   mm/dd/yyyy と出たり(Chrome)して揃わない。
+   空のときは既定の表示を隠し、「日付を選ぶ」だけを出す。
+   カレンダーの印は残すので、そこには重ねない */
+.datefield { position: relative; display: block; }
+.datefield.novalue input::-webkit-datetime-edit { opacity: 0; }
+.datefield > .ph {
+  position: absolute; left: 0; top: 0; bottom: 0; right: 46px;
+  display: flex; align-items: center;
+  padding: 0 15px; font-size: 16px; color: var(--ink-faint);
+  pointer-events: none;
+}
 
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
 .split { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -265,7 +303,7 @@ input[type="checkbox"], input[type="radio"] {
 
 .dump-area {
   width: 100%; min-height: 260px; border: none; background: var(--bg);
-  font-family: var(--font); font-size: 15.5px; line-height: 2.1; letter-spacing: 0.01em;
+  font-family: var(--font); font-size: 16px; line-height: 2.1; letter-spacing: 0.01em;
   color: var(--ink); padding: 4px 0; resize: vertical;
 }
 .dump-area:focus { outline: none; }
@@ -494,18 +532,20 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 
 .composer {
   display: flex; align-items: flex-end; gap: 8px;
-  background: var(--bg); border-radius: 24px; padding: 7px 7px 7px 16px;
+  background: var(--bg); border-radius: 26px; padding: 5px 5px 5px 16px;
   box-shadow: inset 0 0 0 1.5px var(--ink); margin-top: 10px;
 }
 .composer textarea {
   flex: 1; border: none; background: transparent; resize: none;
   padding: 9px 0; min-height: 22px; max-height: 148px;
-  font-family: var(--font); font-size: 15px; line-height: 1.65; color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.65; color: var(--ink);
 }
 .composer textarea:focus { outline: none; }
 .composer textarea::placeholder { color: var(--ink-faint); }
+/* 案内文は1行で収める。折り返すと、伸びる前の高さで2行目が切れて見える */
+.composer textarea::placeholder { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 .composer .c-mic, .composer .c-send {
-  flex: none; width: 38px; height: 38px; border-radius: 50%;
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 .composer .c-mic { background: var(--surface); color: var(--ink); }
@@ -522,12 +562,12 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 /* 入力欄まわりの補助操作。帯の外に小さく置く */
 .composer-aside {
   display: flex; justify-content: center; gap: 18px;
-  margin: 10px 0 0; font-size: 12.5px; color: var(--ink-soft);
+  margin: 2px 0 0; font-size: 12.5px; color: var(--ink-soft);
 }
 .composer-aside button {
   border: none; background: none; cursor: pointer;
   font-family: inherit; font-size: inherit; color: inherit;
-  padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px;
+  min-height: 44px; padding: 0 6px; text-decoration: underline; text-underline-offset: 3px;
 }
 
 /* 折りたたみ(診断の状態など) */
@@ -567,3 +607,6 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
   margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line);
   font-size: 13.5px; font-weight: 700;
 }
+
+/* 済んだ項目の「まだなら何をするか」は、読めるが目立たない濃さに落とす */
+.check-row.done .card-meta { opacity: 0.45; }
