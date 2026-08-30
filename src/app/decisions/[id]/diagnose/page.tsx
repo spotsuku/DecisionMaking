@@ -384,8 +384,64 @@ export default function DiagnosePage() {
         </>
       ) : (
         <div className="callout neutral">
-          必須の問いは一巡しました。下の「いま決められる?」で次の処理を決めてください。
+          必須の問いは一巡しました。下で、いま決められるかを判定してください。
         </div>
+      )}
+
+      {!locked && (
+        <>
+          <div className="section">いま決められる?(判断可能性)</div>
+          {latestReadiness && (
+            <div className="card">
+              <div className="chips">
+                <span className="badge inverse">{latestReadiness.verdict}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 600 }}>{READINESS_LABEL[latestReadiness.verdict]}</span>
+              </div>
+              {latestReadiness.stopCondition && (
+                <div className="card-meta" style={{ marginTop: 5 }}>停止条件: {latestReadiness.stopCondition}</div>
+              )}
+            </div>
+          )}
+          {!routing ? (
+            <button className="btn" onClick={() => setRouting(true)}>
+              {latestReadiness ? "判定をやり直す" : "いま決められるかを判定する"}
+            </button>
+          ) : (
+            <div className="card strong">
+              <p className="card-meta" style={{ marginTop: 0 }}>当てはまるものを選んでください。どれも当てはまらなければTHINK(決められる)です。</p>
+              <label className="check-row">
+                <input type="checkbox" checked={factsMissing} onChange={(e) => setFactsMissing(e.target.checked)} />
+                <span>確認すれば分かる事実が残っている<br /><span className="card-meta">→ RESEARCH: 調査項目と期限を決める</span></span>
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={needsAsk} onChange={(e) => setNeedsAsk(e.target.checked)} />
+                <span>経験者・権限を持つ人に聞く必要がある<br /><span className="card-meta">→ ASK: 誰に何を聞くかを決める</span></span>
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={testable} onChange={(e) => setTestable(e.target.checked)} />
+                <span>考えても確定しないが、小さく試せば分かる<br /><span className="card-meta">→ TEST: 最小実験と損失上限を決める</span></span>
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={unknowable} onChange={(e) => setUnknowable(e.target.checked)} />
+                <span>調べても試しても、誰にも分からない<br /><span className="card-meta">→ BET: 仮説と撤退条件を決めて賭ける</span></span>
+              </label>
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>情報収集の停止条件</label>
+                <input type="text" value={stopCondition} onChange={(e) => setStopCondition(e.target.value)}
+                  placeholder="例: 金曜までに見積2件。それ以上は集めない" />
+              </div>
+              <div className="row2">
+                <button className="btn primary half" onClick={runRouter}>判定する</button>
+                <button className="btn half" onClick={() => setRouting(false)}>やめる</button>
+              </div>
+            </div>
+          )}
+          {(latestReadiness?.verdict === "THINK" || latestReadiness?.verdict === "BET" || decision.status === "READY") && (
+            <Link href={`/decisions/${decision.id}/commit`}>
+              <button className="btn primary" style={{ marginTop: 10 }}>決断の確定へ進む</button>
+            </Link>
+          )}
+        </>
       )}
 
       <button className="disclosure" onClick={() => setShowState((v) => !v)}>
@@ -431,61 +487,6 @@ export default function DiagnosePage() {
           </>
         )}
 
-        {!locked && (
-          <>
-            <div className="section">いま決められる?(判断可能性)</div>
-            {latestReadiness && (
-              <div className="card">
-                <div className="chips">
-                  <span className="badge inverse">{latestReadiness.verdict}</span>
-                  <span style={{ fontSize: 13.5, fontWeight: 600 }}>{READINESS_LABEL[latestReadiness.verdict]}</span>
-                </div>
-                {latestReadiness.stopCondition && (
-                  <div className="card-meta" style={{ marginTop: 5 }}>停止条件: {latestReadiness.stopCondition}</div>
-                )}
-              </div>
-            )}
-            {!routing ? (
-              <button className="btn" onClick={() => setRouting(true)}>
-                {latestReadiness ? "判定をやり直す" : "いま決められるかを判定する"}
-              </button>
-            ) : (
-              <div className="card strong">
-                <p className="card-meta" style={{ marginTop: 0 }}>当てはまるものを選んでください。どれも当てはまらなければTHINK(決められる)です。</p>
-                <label className="check-row">
-                  <input type="checkbox" checked={factsMissing} onChange={(e) => setFactsMissing(e.target.checked)} />
-                  <span>確認すれば分かる事実が残っている<br /><span className="card-meta">→ RESEARCH: 調査項目と期限を決める</span></span>
-                </label>
-                <label className="check-row">
-                  <input type="checkbox" checked={needsAsk} onChange={(e) => setNeedsAsk(e.target.checked)} />
-                  <span>経験者・権限を持つ人に聞く必要がある<br /><span className="card-meta">→ ASK: 誰に何を聞くかを決める</span></span>
-                </label>
-                <label className="check-row">
-                  <input type="checkbox" checked={testable} onChange={(e) => setTestable(e.target.checked)} />
-                  <span>考えても確定しないが、小さく試せば分かる<br /><span className="card-meta">→ TEST: 最小実験と損失上限を決める</span></span>
-                </label>
-                <label className="check-row">
-                  <input type="checkbox" checked={unknowable} onChange={(e) => setUnknowable(e.target.checked)} />
-                  <span>調べても試しても、誰にも分からない<br /><span className="card-meta">→ BET: 仮説と撤退条件を決めて賭ける</span></span>
-                </label>
-                <div className="field" style={{ marginTop: 8 }}>
-                  <label>情報収集の停止条件</label>
-                  <input type="text" value={stopCondition} onChange={(e) => setStopCondition(e.target.value)}
-                    placeholder="例: 金曜までに見積2件。それ以上は集めない" />
-                </div>
-                <div className="row2">
-                  <button className="btn primary half" onClick={runRouter}>判定する</button>
-                  <button className="btn half" onClick={() => setRouting(false)}>やめる</button>
-                </div>
-              </div>
-            )}
-            {(latestReadiness?.verdict === "THINK" || latestReadiness?.verdict === "BET" || decision.status === "READY") && (
-              <Link href={`/decisions/${decision.id}/commit`}>
-                <button className="btn primary" style={{ marginTop: 10 }}>決断の確定へ進む</button>
-              </Link>
-            )}
-          </>
-        )}
         </>
       )}
 
