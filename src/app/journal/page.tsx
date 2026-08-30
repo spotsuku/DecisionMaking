@@ -130,6 +130,12 @@ export default function JournalPage() {
         </span>
       </div>
 
+      {candidates === null && (
+        <Link href="/decisions/new">
+          <span className="link-row">問いが決まっているなら、直接登録する</span>
+        </Link>
+      )}
+
       {candidates !== null && (() => {
         const questions = candidates.filter((c) => c.kind === "QUESTION");
         const signals = candidates.filter((c) => c.kind === "SIGNAL");
