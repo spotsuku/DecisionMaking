@@ -33,9 +33,9 @@ export default function Home() {
         <h1>決めろ。</h1>
         <p className="heroDescription">問い・判断基準・選択肢を整理し、<strong>24時間以内の最初の行動</strong>まで決める。自分の人生と仕事を、自分で前に進めるための意思決定アプリです。</p>
         <button className="primary" onClick={scrollToDemo}>無料で意思決定してみる <span>→</span></button>
-        <p className="microcopy">毎月3件まで無料・カード不要</p>
+        <p className="microcopy">決断2件まで無料・カード不要</p>
       </div>
-      <div className="phoneWrap"><div className="phoneIntro"><span>決断力を高めるアプリ</span><strong>Decision Making</strong></div><div className="phoneMock" aria-label="Decision Making アプリ画面モック"><i className="sideButton sideButtonTop"/><i className="sideButton sideButtonBottom"/><div className="phoneScreen"><div className="deviceStatus"><span>9:41</span><i>● ●●●</i></div><div className="phoneNotch"/><div className="phoneStatus"><b>DECISION MAKING</b><span>2 / 5</span></div><div className="mockProgress"><i><b/></i></div><p className="mockLabel">JUDGMENT CRITERIA</p><strong>今回の決断で、<br/>最も守りたいものは？</strong><div className="mockAnswers"><span>成長の可能性 <b>→</b></span><span>生活の安定 <b>→</b></span><span>仲間との信頼 <b>→</b></span></div><small>正解ではなく、あなたの判断基準を明確にします。</small><i className="homeIndicator"/></div></div></div>
+      <div className="phoneWrap"><div className="phoneIntro"><span>決断力を高めるアプリ</span><strong>Decision Making</strong></div><div className="shotFrame"><img src="/app/journal.png" width={1170} height={2532} alt="迷っていることを話すと、決めるべきことが候補として挙がってくる書き出し画面" /></div><p className="shotCap">迷っていることを話すだけ。決めるべきことは、アプリが拾います。</p></div>
     </section>
 
     <section className="quoteFeature" aria-labelledby="zuckerberg-quote">
@@ -56,11 +56,11 @@ export default function Home() {
     </div></section>
 
     <section className="features section"><p className="sectionNo red">02 — HOW IT WORKS</p><div className="sectionHeading"><h2>一問ずつ、<br/>決断を前に進める。</h2><p>長い相談文は必要ありません。今の状態に合わせて、次に考えるべき問いだけを出します。</p></div><div className="steps">
-      <article><b>01</b><strong>問いを定める</strong><p>何を、誰が、いつまでに決めるかを一文にする。</p></article>
+      <article><b>01</b><strong>迷いを話す</strong><p>まとまっていなくて大丈夫。話した中から、決めるべきことを拾い出す。</p></article>
       <article><b>02</b><strong>決められない理由を診断</strong><p>情報・基準・権限・感情・実行のどこで止まっているかを見つける。</p></article>
       <article><b>03</b><strong>決断を確定する</strong><p>選択、理由、予測、受け入れる損失をDecision Cardに残す。</p></article>
       <article><b>04</b><strong>行動し、振り返る</strong><p>24時間以内の一歩を決め、結果と予測のズレから学ぶ。</p></article>
-    </div><div className="decisionCard"><div className="cardTop"><span>DECISION CARD</span><b>COMMITTED</b></div><h3>A案に集中する。</h3><dl><div><dt>判断基準</dt><dd>3か月で顧客理解を深められるか</dd></div><div><dt>受け入れること</dt><dd>B案の短期売上を手放す</dd></div><div><dt>最初の行動</dt><dd>今日17時までにチームへ方針を伝える</dd></div></dl></div></section>
+    </div><div className="shotRow"><figure className="shotItem"><div className="shotFrame"><img src="/app/journal.png" width={1170} height={2532} alt="書き出しの会話画面" /></div><figcaption><b>書き出す</b>話すだけで、決めるべきことが候補に挙がる</figcaption></figure><figure className="shotItem"><div className="shotFrame"><img src="/app/diagnose.png" width={1170} height={2532} alt="診断の会話画面" /></div><figcaption><b>診断する</b>答えは自動で項目に振り分けられ、記録に残る</figcaption></figure><figure className="shotItem"><div className="shotFrame"><img src="/app/card.png" width={1170} height={2532} alt="Decision Card" /></div><figcaption><b>確定する</b>選択・予測・損失上限・最初の行動を1枚に</figcaption></figure></div></section>
 
     <section className="learning section"><p className="sectionNo">03 — LEARNING</p><h2>決めたフリは、<br/>成長を完全に止める。</h2><p className="learningLead">曖昧なまま進めると、良い結果だけを自分のものにし、悪い結果を外部環境のせいにできます。アプリは決断前の予測を残し、結果とのズレを同じ物差しで振り返ります。</p><div className="compare"><div><span>これまで</span><strong>上手くいかなければ、説明を変える。</strong><p>何を決めたかが曖昧なため、失敗も学びも残らない。</p></div><div><span>Decision Making</span><strong>結果を受け入れ、判断基準を更新する。</strong><p>悪い結果とのズレが、次の決断を良くする材料になる。</p></div></div></section>
 
@@ -70,7 +70,7 @@ export default function Home() {
 
     <section id="demo" className="demo section">{!started?<div className="demoIntro"><p className="sectionNo red">05 — TRY THE APP</p><h2>3つの質問で、<br/>使い心地を試す。</h2><p>いま抱えている意思決定をひとつ思い浮かべてください。答えを出すのではなく、何が決断を止めているかを整理します。</p><button className="primary" onClick={()=>setStarted(true)}>意思決定してみる <span>→</span></button></div>:answers.length<questions.length?<div className="questionPanel"><div className="trialProgress"><span>0{question+1}</span><i><b style={{width:`${((question+1)/questions.length)*100}%`}}/></i><small>0{questions.length}</small></div><p className="sectionNo red">{questions[question].label}</p><h2>{questions[question].title}</h2><div className="answerGrid">{questions[question].answers.map(answer=><button onClick={()=>choose(answer)} key={answer}>{answer}<span>→</span></button>)}</div></div>:<div className="resultPanel" aria-live="polite"><p className="sectionNo red">YOUR NEXT STEP</p><h2>次は、あなたの判断基準を言葉にします。</h2><p>今回の回答から、最初に整理すべきなのは<strong>「{answers[1]}」</strong>です。製品版では、選択肢の整理、決断の確定、24時間以内の行動まで進みます。</p><button className="primary">無料で続きを始める <span>→</span></button><button className="reset" onClick={reset}>別の意思決定で試す</button></div>}</section>
 
-    <section className="pricing section"><p className="sectionNo">06 — START</p><div className="pricingCopy"><h2><span>自分の人生と仕事を、</span><span>自分で決めて</span><span>進め。</span></h2><p>最初の3件は無料。決断を記録し、行動と振り返りまで試せます。</p></div><div className="priceCard"><span>FREE</span><strong>¥0</strong><ul><li>毎月3件の意思決定</li><li>Decision Card</li><li>最初の行動設定</li><li>結果の振り返り</li></ul><button onClick={scrollToDemo}>無料で始める <b>→</b></button></div></section>
+    <section className="pricing section"><p className="sectionNo">06 — START</p><div className="pricingCopy"><h2><span>自分の人生と仕事を、</span><span>自分で決めて</span><span>進め。</span></h2><p>最初の3件は無料。決断を記録し、行動と振り返りまで試せます。</p></div><div className="priceCard"><span>FREE</span><strong>¥0</strong><ul><li>決断2件まで(累計)</li><li>書き出しと診断はすべて利用可</li><li>Decision Card・最初の行動</li><li>結果の振り返り</li></ul><p className="priceNext">3件目からは スタンダード <b>¥1,480/月</b>(毎月10件・超過は1件¥180)</p><button onClick={scrollToDemo}>無料で始める <b>→</b></button></div></section>
     <footer className="footer"><strong>DECISION MAKING</strong><span>© 2026 Decision Making</span></footer>
   </main>;
 }

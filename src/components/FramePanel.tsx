@@ -20,7 +20,7 @@ export function FramePanel({ decision, version }: { decision: Decision; version:
       <div className="card flat">
         <div className="card-row">
           <span className="card-meta">
-            問い・主体・期限(S1 Frame) — 主体: {version.ownerRole || "未設定"} / 期限: {decision.dueAt ? decision.dueAt.slice(0, 10) : "未設定"}
+            決める人: {version.ownerRole || "未設定"} / 期限: {decision.dueAt ? decision.dueAt.slice(0, 10) : "未設定"}
           </span>
           <button className="btn ghost small" style={{ marginLeft: "auto" }} onClick={() => setOpen(true)}>編集</button>
         </div>
@@ -30,7 +30,7 @@ export function FramePanel({ decision, version }: { decision: Decision; version:
 
   return (
     <div className="card strong">
-      <h2 className="section" style={{ marginTop: 0 }}>問いを定める(S1 Frame)</h2>
+      <h2 className="section" style={{ marginTop: 0 }}>何を・誰が・いつまでに決めるか</h2>
       <div className="field">
         <label>何を決めますか?<span className="req">*</span></label>
         <textarea value={question} onChange={(e) => setQuestion(e.target.value)} />
