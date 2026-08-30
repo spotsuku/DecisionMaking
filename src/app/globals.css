@@ -481,3 +481,11 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
   padding: 11px 14px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.6;
 }
 .local-only .chev { margin-left: auto; color: var(--ink-faint); flex: none; }
+
+/* 決めてみないかの誘い。会話ではなくアプリからの提案なので、吹き出しにしない */
+.invite {
+  margin-top: 18px; padding: 15px 17px;
+  background: var(--surface); border-radius: var(--r-card);
+}
+.invite .it { font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; }
+.invite .id { font-size: 12.5px; color: var(--ink-soft); line-height: 1.8; margin-top: 5px; }

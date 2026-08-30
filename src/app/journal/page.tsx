@@ -16,7 +16,7 @@ import {
   addUserTurn,
   emptyBrainstorm,
   fallbackPrompt,
-  readyToDecide,
+  shouldInvite,
   transcript,
   type BrainstormState,
 } from "@/lib/brainstorm";
@@ -32,6 +32,9 @@ export default function JournalPage() {
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
   const [added, setAdded] = useState<Record<string, string>>({});
+  // 「決めてみますか」を断られたときの候補数。粘らないために覚えておく
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const savedRef = useRef<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -138,8 +141,31 @@ export default function JournalPage() {
       </button>
       <div ref={endRef} />
 
+      {shouldInvite(candidates.length, dismissedAt) && (
+        <div className="invite">
+          <div className="it">決めていないことが{candidates.length}つ出てきました。</div>
+          <div className="id">
+            ひとつ選ぶと、決めるための診断に進めます。まだ話し足りなければ、そのまま続けても大丈夫です。
+          </div>
+          <div className="row2" style={{ marginTop: 12 }}>
+            <button
+              className="btn primary half"
+              onClick={() => {
+                setDismissedAt(candidates.length);
+                listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              決めるものを選ぶ
+            </button>
+            <button className="btn half" onClick={() => setDismissedAt(candidates.length)}>
+              もう少し話す
+            </button>
+          </div>
+        </div>
+      )}
+
       {candidates.length > 0 && (
-        <div className="sheet" style={{ marginTop: 16 }}>
+        <div className="sheet" ref={listRef} style={{ marginTop: 16 }}>
           <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em" }}>
             決めることになりそうなもの({candidates.length})
           </div>
@@ -162,12 +188,6 @@ export default function JournalPage() {
             </div>
           ))}
         </div>
-      )}
-
-      {readyToDecide(state) && (
-        <p className="card-meta" style={{ marginTop: 12, lineHeight: 1.8 }}>
-          まだ話し足りなければ続けてください。区切りがついたら、上の候補から1つ選んで診断に進めます。
-        </p>
       )}
 
       <Link href="/decisions/new" style={{ display: "block", marginTop: 16 }}>

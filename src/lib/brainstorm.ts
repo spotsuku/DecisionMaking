@@ -150,6 +150,24 @@ export function readyToDecide(state: BrainstormState): boolean {
 }
 
 /**
+ * 決めてみないかと誘うか。
+ *
+ * 会話の中では誘わない ── AIが「そろそろ決めませんか」と言い出すと、
+ * 話を聞く役から誘導する役に変わってしまう。会話とは別のカードとして出す。
+ *
+ * 一度断られたら黙る。さらに2件増えて状況が変わったときだけ、もう一度だけ出す。
+ * 決めるかどうかは本人が決めることなので、粘らない(INV-05)。
+ *
+ * @param candidates  いま見えている候補の数
+ * @param dismissedAt 断られたときの候補数。まだ断られていなければ null
+ */
+export function shouldInvite(candidates: number, dismissedAt: number | null): boolean {
+  if (candidates < 2) return false;
+  if (dismissedAt === null) return true;
+  return candidates >= dismissedAt + 2;
+}
+
+/**
  * 会話の中で見えてくると、あとの診断が楽になること。
  * AIには「必ず聞け」ではなく「見えてきたら拾って」として渡す。
  */

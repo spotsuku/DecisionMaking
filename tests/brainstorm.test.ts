@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
   addAppTurn, addUserTurn, emptyBrainstorm, fallbackPrompt,
-  readyToDecide, transcript, USEFUL_TO_SURFACE, type BrainstormState,
+  readyToDecide, shouldInvite, transcript, USEFUL_TO_SURFACE, type BrainstormState,
 } from "../src/lib/brainstorm";
 
 /** 実際の会話のように、問いを出して答えるを繰り返す */
@@ -131,5 +131,24 @@ describe("問いが話題を奪わない", () => {
       expect(p.text, p.text).not.toMatch(presumes);
       s = addAppTurn(addUserTurn(s, `答え${i}`), p.text, p.key);
     }
+  });
+});
+
+describe("決めてみないかと誘うタイミング", () => {
+  it("候補が2つ出たら誘う", () => {
+    expect(shouldInvite(0, null)).toBe(false);
+    expect(shouldInvite(1, null)).toBe(false);
+    expect(shouldInvite(2, null)).toBe(true);
+  });
+
+  it("一度断られたら黙る(粘らない)", () => {
+    expect(shouldInvite(2, 2)).toBe(false);
+    expect(shouldInvite(3, 2)).toBe(false);
+  });
+
+  it("さらに2件増えて状況が変われば、もう一度だけ誘う", () => {
+    expect(shouldInvite(4, 2)).toBe(true);
+    expect(shouldInvite(5, 4)).toBe(false);
+    expect(shouldInvite(6, 4)).toBe(true);
   });
 });
