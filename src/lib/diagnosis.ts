@@ -44,6 +44,12 @@ export interface QuestionDef {
   rephrase?: string;
   /** 未確定の必須フィールドに対応するか */
   requiredField: boolean;
+  /**
+   * すでに分かっていることは聞かない。
+   * 「問い」の成立条件は問いと期限をまとめて見るので、期限だけが空でも
+   * 未達になる。そのまま質問を選ぶと、入力済みの問いをもう一度聞いてしまう。
+   */
+  alreadyKnown?: (version: DecisionVersion, dueAt: string | null) => boolean;
   emotionalLoad: number; // 0-2
 }
 
@@ -53,6 +59,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "QUESTION",
     text: "いま考えていることは、何を決める話ですか?",
     purpose: "何を決めるかを一文で確定する",
+    alreadyKnown: (v) => v.question.trim() !== "",
     rephrase: "うまく一文にならなくて大丈夫です。いま頭にあることを、そのまま話してみてください。",
     parts: [{ key: "question", label: "決めること", placeholder: "例: 犬を家に迎えるかどうか" }],
     requiredField: true,
@@ -63,6 +70,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "AGENCY",
     text: "この件は、誰が決めますか?",
     purpose: "決定権と責任範囲を確定する",
+    alreadyKnown: (v) => v.ownerRole.trim() !== "",
     rephrase: "決める人がはっきりしないのですね。では、あなたが「やる / やらない」を言える部分はどこですか?",
     parts: [
       {
@@ -83,6 +91,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "QUESTION",
     text: "いつまでに決めますか?",
     purpose: "決断期限と、超過したときに起きることを確定する",
+    alreadyKnown: (_v, dueAt) => !!dueAt,
     rephrase: "期限が決まっていないのですね。では、いつまでに決まっていないと困りますか?",
     parts: [
       {
@@ -447,7 +456,9 @@ export function selectNextQuestion(
   // 1セッション最大7問(12章)。必須が埋まれば早く終える。
   if (askedCount >= 7 || missingGaps.size === 0) return null;
 
-  const tieOrder = ["Q_FRAME_SENTENCE", "Q_OWNER", "Q_CRITERIA", "Q_INFO_STOP", "Q_ACTION_24H", "Q_DEADLINE", "Q_WORST_CASE", "Q_FEELING"];
+  // 設計書の同点順は成立条件の順(問い → 主体 → 価値 → 認識 → 実行)。
+  // 期限は「問い」の成立条件に含まれるので、問いの直後に置く。
+  const tieOrder = ["Q_FRAME_SENTENCE", "Q_DEADLINE", "Q_OWNER", "Q_CRITERIA", "Q_INFO_STOP", "Q_ACTION_24H", "Q_WORST_CASE", "Q_FEELING"];
   const safetyFactor = 1;
 
   let best: { def: QuestionDef; score: number } | null = null;
@@ -463,6 +474,7 @@ export function selectNextQuestion(
       repetition * 4 -
       def.emotionalLoad * safetyFactor;
     if (repetition) continue; // 同じ質問は繰り返さない(6.3)
+    if (def.alreadyKnown?.(version, dueAt)) continue; // 分かっていることは聞かない
     if (
       !best ||
       score > best.score ||

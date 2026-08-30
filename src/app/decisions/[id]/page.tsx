@@ -43,7 +43,7 @@ export default function DecisionHubPage() {
   // 材料がそろう前に確定へ誘導すると、Commit gateで弾かれる行き止まりになる。
   const nextStep = (() => {
     const base = `/decisions/${decision.id}`;
-    if (disp === "FRAME") return { label: "問いと期限を決める", href: `${base}/diagnose` };
+    if (disp === "FRAME") return { label: "何を・誰が・いつまでに決めるか", href: `${base}/frame` };
     if (disp === "DECIDABLE") return { label: "決断を確定する", href: `${base}/commit` };
     const readiness = db.readiness
       .filter((r) => r.versionId === version.id)

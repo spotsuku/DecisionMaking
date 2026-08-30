@@ -285,3 +285,37 @@ describe("チャットの受け答え(噛み合わせ)", () => {
     expect(r.turn.kind).toBe("FILED");
   });
 });
+
+describe("すでに分かっていることは聞かない", () => {
+  const iso = new Date(Date.now() + 7 * 86400000).toISOString();
+
+  it("受入テスト: 問いが入っていれば、期限が空でも問いを聞き直さない", () => {
+    const db: DB = emptyDB();
+    const v = makeVersion({ question: "増田石油さんに出資リマインドするかどうか" });
+    db.versions.push(v);
+    // 期限が無いと「問い」の成立条件は未達だが、問い自体はもう分かっている
+    const q = selectNextQuestion(db, v, null);
+    expect(q?.code).not.toBe("Q_FRAME_SENTENCE");
+  });
+
+  it("期限だけが空なら、期限を聞く", () => {
+    const db: DB = emptyDB();
+    const v = makeVersion({ question: "AかBか", ownerRole: "自分" });
+    db.versions.push(v);
+    expect(selectNextQuestion(db, v, null)?.code).toBe("Q_DEADLINE");
+  });
+
+  it("決定者が入っていれば、決定者は聞かない", () => {
+    const db: DB = emptyDB();
+    const v = makeVersion({ question: "AかBか", ownerRole: "自分" });
+    db.versions.push(v);
+    expect(selectNextQuestion(db, v, iso)?.code).not.toBe("Q_OWNER");
+  });
+
+  it("何も入っていなければ、これまで通り問いから聞く", () => {
+    const db: DB = emptyDB();
+    const v = makeVersion();
+    db.versions.push(v);
+    expect(selectNextQuestion(db, v, null)?.code).toBe("Q_FRAME_SENTENCE");
+  });
+});
