@@ -8,7 +8,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDB, fmtDateTime } from "@/lib/useDB";
 import { store } from "@/lib/store";
-import { extractCandidates, candidateTitle, type Candidate } from "@/lib/journal";
+import { candidateTitle } from "@/lib/journal";
+import { assistExtract } from "@/lib/ai/assist";
+import type { SourcedCandidate } from "@/lib/ai/types";
 import { useSpeechInput, appendSpeech } from "@/lib/useSpeech";
 import { IconBack, IconMic } from "@/components/icons";
 
@@ -16,7 +18,8 @@ export default function JournalPage() {
   const router = useRouter();
   const db = useDB();
   const [text, setText] = useState("");
-  const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+  const [candidates, setCandidates] = useState<SourcedCandidate[] | null>(null);
+  const [reading, setReading] = useState(false);
   const [added, setAdded] = useState<Record<string, string>>({}); // candidate -> decisionId
   const textRef = useRef(text);
   textRef.current = text;
@@ -27,11 +30,17 @@ export default function JournalPage() {
     stop: stopMic,
   } = useSpeechInput((spoken) => setText(appendSpeech(textRef.current, spoken)));
 
-  const save = () => {
-    if (!text.trim()) return;
+  const save = async () => {
+    if (!text.trim() || reading) return;
     stopMic();
     store.addJournalEntry(text.trim());
-    setCandidates(extractCandidates(text));
+    // ルールの結果が先に確定し、AIはそこに足すだけ。落ちても候補は出る
+    setReading(true);
+    try {
+      setCandidates(await assistExtract(text));
+    } finally {
+      setReading(false);
+    }
   };
 
   const addCandidate = (c: string) => {
@@ -57,7 +66,9 @@ export default function JournalPage() {
       <div className="appbar">
         <button className="back" onClick={() => router.push("/")} aria-label="戻る"><IconBack /></button>
         <span className="title">書き出し</span>
-        <button className="appbar-action" onClick={save} disabled={!text.trim()}>保存</button>
+        <button className="appbar-action" onClick={save} disabled={!text.trim() || reading}>
+          {reading ? "読んでいます…" : "保存"}
+        </button>
       </div>
 
       <textarea
@@ -115,7 +126,10 @@ export default function JournalPage() {
                 </div>
                 {questions.map((c) => (
                   <div key={c.text} className="cand">
-                    <span className="t">{c.text}</span>
+                    <span className="t">
+                      {c.text}
+                      {c.source === "AI" && <span className="badge soft" style={{ marginLeft: 6 }}>AI</span>}
+                    </span>
                     {added[c.text] ? (
                       <Link href={`/decisions/${added[c.text]}`}>
                         <span className="chip-btn soft">追加済み ✓</span>

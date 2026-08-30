@@ -24,6 +24,7 @@ import {
   ALGORITHM_VERSION,
 } from "@/lib/diagnosis";
 import { BLOCKER_LABEL, GAP_LABEL, READINESS_LABEL, type AnswerMode, type Readiness } from "@/lib/types";
+import { assistReply, assistSplit } from "@/lib/ai/assist";
 import { FramePanel } from "@/components/FramePanel";
 import { VoiceTextarea } from "@/components/VoiceTextarea";
 import { IconBack } from "@/components/icons";
@@ -43,6 +44,7 @@ export default function DiagnosePage() {
   // 進行中の1問ぶんのやりとり。確定するまでは画面の中だけに持つ
   const [chat, setChat] = useState<ChatState>(emptyChatState);
   const [turns, setTurns] = useState<{ from: "USER" | "APP"; text: string }[]>([]);
+  const [thinking, setThinking] = useState(false);
   const [mode, setMode] = useState<AnswerMode>("CHAT");
   const [showLog, setShowLog] = useState(false);
 
@@ -150,10 +152,31 @@ export default function DiagnosePage() {
    * 内容のない返事をそのまま欄へ入れると会話が噛み合わなくなるので、
    * 聞き直す・欄を埋め直す・記録して次へ、を chatReply が振り分ける。
    */
-  const submitChat = () => {
-    if (!current || !chatDraft.trim()) return;
+  const submitChat = async () => {
+    if (!current || !chatDraft.trim() || thinking) return;
     const said = chatDraft.trim();
-    const { turn, values } = chatReply(current, chat, said);
+
+    // 進行を決めるのはルール。AIは言い換えと振り分けだけを助ける(6.1)
+    let { turn, values } = chatReply(current, chat, said);
+
+    if (turn.kind !== "REPHRASE" && turn.kind !== "SKIP" && !chat.askingPart) {
+      setThinking(true);
+      try {
+        const split = await assistSplit(current, said);
+        const merged = { ...chat.values, ...split.values };
+        // 振り分けが変われば、次の一手も決め直す
+        const missing = current.parts.find((part) => !part.optional && (merged[part.key] ?? "").trim() === "");
+        values = merged;
+        turn = missing
+          ? { kind: "FOLLOW_UP", partKey: missing.key, text: missing.followUp ?? `${missing.label}は何ですか?` }
+          : turn.kind === "FOLLOW_UP"
+          ? { kind: "FILED", text: "受け取りました。次に進みます。" }
+          : turn;
+      } finally {
+        setThinking(false);
+      }
+    }
+
     const spoken = [...turns, { from: "USER" as const, text: said }];
     // 記録に残すのは中身のある発言だけ。「分からない」は聞き直しのきっかけであって答えではない
     const rawText = spoken
@@ -169,13 +192,25 @@ export default function DiagnosePage() {
       saveAnswer(values, "CHAT", { skipped: true, rawText });
       return;
     }
-    setTurns([...spoken, { from: "APP", text: turn.text }]);
+    const asked = turn;
+    setTurns([...spoken, { from: "APP", text: asked.text }]);
     setChat({
       values,
-      rephrased: chat.rephrased || turn.kind === "REPHRASE",
-      askingPart: turn.kind === "FOLLOW_UP" ? turn.partKey : null,
+      rephrased: chat.rephrased || asked.kind === "REPHRASE",
+      askingPart: asked.kind === "FOLLOW_UP" ? asked.partKey : null,
     });
     setChatDraft("");
+
+    // 定型文のまま先に出しておき、AIの言い換えが返ったら差し替える。
+    // 返らなくても会話は成立している
+    setThinking(true);
+    assistReply(current, asked, said)
+      .then((text) => {
+        if (text !== asked.text) {
+          setTurns((ts) => ts.map((t, i) => (i === ts.length - 1 && t.from === "APP" ? { ...t, text } : t)));
+        }
+      })
+      .finally(() => setThinking(false));
   };
 
   /** わからない質問は飛ばす。記録は残し、成立条件は埋まっていないままにする */
@@ -321,8 +356,8 @@ export default function DiagnosePage() {
                   ? `答えを「${current.parts.map((part) => part.label).join("」「")}」の欄へ自動で振り分けます。あとから直せます。`
                   : "話して入力もできます。分からないときは、そのまま「分からない」と答えて大丈夫です。"}
               </div>
-              <button className="btn primary" onClick={submitChat} disabled={!chatDraft.trim()}>
-                {askingPart ? "答える" : "答えて次の質問へ"}
+              <button className="btn primary" onClick={submitChat} disabled={!chatDraft.trim() || thinking}>
+                {thinking ? "考えています…" : askingPart ? "答える" : "答えて次の質問へ"}
               </button>
               <button className="btn ghost" style={{ marginTop: 4 }} onClick={skipQuestion}>
                 わからない・答えたくない(飛ばす)
