@@ -35,7 +35,7 @@ export default function Home() {
         <button className="primary" onClick={scrollToDemo}>無料で意思決定してみる <span>→</span></button>
         <p className="microcopy">決断2件まで無料・カード不要</p>
       </div>
-      <div className="phoneWrap"><div className="phoneIntro"><span>決断力を高めるアプリ</span><strong>Decision Making</strong></div><div className="shotFrame"><img src="/app/journal.png" width={1170} height={2532} alt="迷っていることを話すと、決めるべきことが候補として挙がってくる書き出し画面" /></div><p className="shotCap">迷っていることを話すだけ。決めるべきことは、アプリが拾います。</p></div>
+      <div className="phoneWrap"><div className="phoneIntro"><span>決断力を高めるアプリ</span><strong>Decision Making</strong></div><div className="shotFrame"><img src="/app/journal.webp" width={640} height={1385} fetchPriority="high" decoding="async" alt="迷っていることを話すと、決めるべきことが候補として挙がってくる書き出し画面" /></div><p className="shotCap">迷っていることを話すだけ。決めるべきことは、アプリが拾います。</p></div>
     </section>
 
     <section className="quoteFeature" aria-labelledby="zuckerberg-quote">
@@ -60,7 +60,7 @@ export default function Home() {
       <article><b>02</b><strong>決められない理由を診断</strong><p>情報・基準・権限・感情・実行のどこで止まっているかを見つける。</p></article>
       <article><b>03</b><strong>決断を確定する</strong><p>選択、理由、予測、受け入れる損失をDecision Cardに残す。</p></article>
       <article><b>04</b><strong>行動し、振り返る</strong><p>24時間以内の一歩を決め、結果と予測のズレから学ぶ。</p></article>
-    </div><div className="shotRow"><figure className="shotItem"><div className="shotFrame"><img src="/app/journal.png" width={1170} height={2532} alt="書き出しの会話画面" /></div><figcaption><b>書き出す</b>話すだけで、決めるべきことが候補に挙がる</figcaption></figure><figure className="shotItem"><div className="shotFrame"><img src="/app/diagnose.png" width={1170} height={2532} alt="診断の会話画面" /></div><figcaption><b>診断する</b>答えは自動で項目に振り分けられ、記録に残る</figcaption></figure><figure className="shotItem"><div className="shotFrame"><img src="/app/card.png" width={1170} height={2532} alt="Decision Card" /></div><figcaption><b>確定する</b>選択・予測・損失上限・最初の行動を1枚に</figcaption></figure></div></section>
+    </div><div className="shotRow"><figure className="shotItem"><div className="shotFrame"><img src="/app/journal.webp" width={640} height={1385} loading="lazy" decoding="async" alt="書き出しの会話画面" /></div><figcaption><b>書き出す</b>話すだけで、決めるべきことが候補に挙がる</figcaption></figure><figure className="shotItem"><div className="shotFrame"><img src="/app/diagnose.webp" width={640} height={1385} loading="lazy" decoding="async" alt="診断の会話画面" /></div><figcaption><b>診断する</b>答えは自動で項目に振り分けられ、記録に残る</figcaption></figure><figure className="shotItem"><div className="shotFrame"><img src="/app/card.webp" width={640} height={1385} loading="lazy" decoding="async" alt="Decision Card" /></div><figcaption><b>確定する</b>選択・予測・損失上限・最初の行動を1枚に</figcaption></figure></div></section>
 
     <section className="learning section"><p className="sectionNo">03 — LEARNING</p><h2>決めたフリは、<br/>成長を完全に止める。</h2><p className="learningLead">曖昧なまま進めると、良い結果だけを自分のものにし、悪い結果を外部環境のせいにできます。アプリは決断前の予測を残し、結果とのズレを同じ物差しで振り返ります。</p><div className="compare"><div><span>これまで</span><strong>上手くいかなければ、説明を変える。</strong><p>何を決めたかが曖昧なため、失敗も学びも残らない。</p></div><div><span>Decision Making</span><strong>結果を受け入れ、判断基準を更新する。</strong><p>悪い結果とのズレが、次の決断を良くする材料になる。</p></div></div></section>
 
