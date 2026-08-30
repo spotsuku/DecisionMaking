@@ -131,8 +131,8 @@ export default function JournalPage() {
       </div>
 
       {candidates === null && (
-        <Link href="/decisions/new">
-          <span className="link-row">問いが決まっているなら、直接登録する</span>
+        <Link href="/decisions/new" style={{ display: "block", marginTop: 16 }}>
+          <span className="btn outline">決めることを直接登録する</span>
         </Link>
       )}
 

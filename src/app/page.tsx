@@ -62,8 +62,8 @@ export default function HomePage() {
         </button>
       </div>
 
-      <Link href="/decisions/new">
-        <span className="link-row">決めることが決まっているなら、直接登録する</span>
+      <Link href="/decisions/new" style={{ display: "block", marginTop: 10 }}>
+        <span className="btn outline">決めることを直接登録する</span>
       </Link>
 
       {observations.length > 0 && (
