@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { store } from "@/lib/store";
 import { classifySafety } from "@/lib/diagnosis";
@@ -15,6 +15,21 @@ export default function NewDecisionPage() {
   const [domain, setDomain] = useState<DomainCode>("WORK");
   const [dueAt, setDueAt] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [journalNote, setJournalNote] = useState("");
+
+  // 書き出しから来た場合、その内容を種として引き継ぐ
+  useEffect(() => {
+    try {
+      const seed = window.sessionStorage.getItem("dm-seed-question");
+      const note = window.sessionStorage.getItem("dm-seed-note");
+      if (seed) setQuestion(seed);
+      if (note) setJournalNote(note);
+      window.sessionStorage.removeItem("dm-seed-question");
+      window.sessionStorage.removeItem("dm-seed-note");
+    } catch {
+      // sessionStorageが使えなくても登録はできる
+    }
+  }, []);
 
   const safety = classifySafety(domain, `${title} ${question}`);
 
@@ -45,6 +60,13 @@ export default function NewDecisionPage() {
         <div className="callout">
           <strong>{safety.reason}</strong>
           <div>{safety.guidance}</div>
+        </div>
+      )}
+
+      {journalNote && (
+        <div className="callout neutral" style={{ maxHeight: 150, overflowY: "auto", whiteSpace: "pre-line" }}>
+          <strong style={{ display: "block", marginBottom: 4 }}>さっき書き出した内容</strong>
+          {journalNote}
         </div>
       )}
 

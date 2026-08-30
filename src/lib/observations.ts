@@ -11,6 +11,8 @@ export interface Observation {
   /** 赤で示す警告(Drift・期限超過)か、静かな観察か */
   warn: boolean;
   sortKey: number;
+  /** 同じ種類の中では、長く置かれているものを上に */
+  days: number;
 }
 
 const DAY = 86400000;
@@ -30,6 +32,7 @@ export function buildObservations(db: DB, nowMs = Date.now()): Observation[] {
         fact: "決めた案と、直近の行動が違う方向です",
         warn: true,
         sortKey: 0,
+        days: Math.floor((nowMs - new Date(d.createdAt).getTime()) / DAY),
       });
       continue;
     }
@@ -50,6 +53,7 @@ export function buildObservations(db: DB, nowMs = Date.now()): Observation[] {
           fact: `決断期限を過ぎています。${pendingDays}日考え中`,
           warn: true,
           sortKey: 1,
+          days: pendingDays,
         });
       } else if (dueChanges >= 2) {
         out.push({
@@ -58,9 +62,11 @@ export function buildObservations(db: DB, nowMs = Date.now()): Observation[] {
           fact: `${pendingDays}日考え中。期限が${dueChanges}回延びています`,
           warn: false,
           sortKey: 2,
+          days: pendingDays,
         });
-      } else if (pendingDays >= 7) {
-        // 停滞: 新しい入力が増えないまま日数が経過
+      } else {
+        // 未確定の決断は、それ自体が「決めずに置いていること」。
+        // 停滞(新しい入力が増えていない日数)が分かればそれを添える。
         const version = db.versions
           .filter((v) => v.decisionId === d.id)
           .sort((a, b) => b.versionNo - a.versionNo)[0];
@@ -76,9 +82,12 @@ export function buildObservations(db: DB, nowMs = Date.now()): Observation[] {
           fact:
             quietDays >= 5
               ? `新しい情報が増えないまま、${quietDays}日たちました`
-              : `${pendingDays}日考え中`,
+              : pendingDays >= 1
+              ? `${pendingDays}日考え中`
+              : "まだ決めていません",
           warn: false,
           sortKey: 3,
+          days: pendingDays,
         });
       }
     }
@@ -96,10 +105,13 @@ export function buildObservations(db: DB, nowMs = Date.now()): Observation[] {
           fact: "レビュー日を過ぎています。予測と実績を見比べましょう",
           warn: false,
           sortKey: 2,
+          days: Math.floor((nowMs - new Date(d.reviewAt).getTime()) / DAY),
         });
       }
     }
   }
 
-  return out.sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name)).slice(0, 4);
+  return out
+    .sort((a, b) => a.sortKey - b.sortKey || b.days - a.days || a.name.localeCompare(b.name))
+    .slice(0, 4);
 }

@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDB, fmtDateTime } from "@/lib/useDB";
 import { store } from "@/lib/store";
-import { extractCandidates, candidateTitle } from "@/lib/journal";
+import { extractCandidates, candidateTitle, type Candidate } from "@/lib/journal";
 import { IconBack, IconMic } from "@/components/icons";
 
 type SpeechRecognitionLike = {
@@ -26,7 +26,7 @@ export default function JournalPage() {
   const router = useRouter();
   const db = useDB();
   const [text, setText] = useState("");
-  const [candidates, setCandidates] = useState<string[] | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [added, setAdded] = useState<Record<string, string>>({}); // candidate -> decisionId
   const [listening, setListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
@@ -82,6 +82,17 @@ export default function JournalPage() {
     setAdded((m) => ({ ...m, [c]: decision.id }));
   };
 
+  /** 問いの形になっていない兆候・書き出し全文からは、本人に問いを立ててもらう */
+  const startFraming = (seed: string) => {
+    try {
+      window.sessionStorage.setItem("dm-seed-question", seed);
+      window.sessionStorage.setItem("dm-seed-note", text.trim());
+    } catch {
+      // 保存できなくても登録画面へは進める
+    }
+    router.push("/decisions/new");
+  };
+
   const recentEntries = [...db.journal].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
@@ -119,52 +130,74 @@ export default function JournalPage() {
         </span>
       </div>
 
-      {candidates !== null && (
-        <div className="sheet">
-          {candidates.length > 0 ? (
-            <>
-              <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em" }}>
-                この中に、決めることが隠れていそうです
-              </div>
-              <div className="card-meta" style={{ marginBottom: 4 }}>
-                候補は提案です。決断にするかどうかは、あなたが選びます。
-              </div>
-              {candidates.map((c) => (
-                <div key={c} className="cand">
-                  <span className="t">{c}</span>
-                  {added[c] ? (
-                    <Link href={`/decisions/${added[c]}`}>
-                      <span className="chip-btn soft">追加済み ✓</span>
-                    </Link>
-                  ) : (
-                    <button className="chip-btn" onClick={() => addCandidate(c)}>追加</button>
-                  )}
+      {candidates !== null && (() => {
+        const questions = candidates.filter((c) => c.kind === "QUESTION");
+        const signals = candidates.filter((c) => c.kind === "SIGNAL");
+        return (
+          <div className="sheet">
+            {questions.length > 0 ? (
+              <>
+                <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em" }}>
+                  この中に、決めることが隠れていそうです
                 </div>
-              ))}
-            </>
-          ) : (
-            <>
+                <div className="card-meta" style={{ marginBottom: 4 }}>
+                  候補は提案です。決断にするかどうかは、あなたが選びます。
+                </div>
+                {questions.map((c) => (
+                  <div key={c.text} className="cand">
+                    <span className="t">{c.text}</span>
+                    {added[c.text] ? (
+                      <Link href={`/decisions/${added[c.text]}`}>
+                        <span className="chip-btn soft">追加済み ✓</span>
+                      </Link>
+                    ) : (
+                      <button className="chip-btn" onClick={() => addCandidate(c.text)}>追加</button>
+                    )}
+                  </div>
+                ))}
+              </>
+            ) : (
               <div style={{ fontSize: 14, fontWeight: 800 }}>保存しました</div>
-              <div className="card-meta">
-                今回は決断の候補は見つかりませんでした。書き出すこと自体に意味があります。
-                決めることがはっきりしているなら、下から直接登録できます。
-              </div>
-            </>
-          )}
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="btn half" onClick={() => { setText(""); setCandidates(null); setAdded({}); }}>
-              続けて書く
-            </button>
-            <button className="btn primary half" onClick={() => router.push("/")}>ホームへ</button>
-          </div>
-        </div>
-      )}
+            )}
 
-      <div style={{ marginTop: 20 }}>
-        <Link href="/decisions/new">
-          <span className="link-row">問いが決まっているなら、直接登録する</span>
-        </Link>
-      </div>
+            {signals.length > 0 && (
+              <>
+                <div className="section" style={{ marginTop: questions.length > 0 ? 18 : 10 }}>
+                  決めずに置いているサイン
+                </div>
+                <div className="card-meta" style={{ marginTop: -4, marginBottom: 4 }}>
+                  問いの形にはなっていませんが、未決のまま進んでいる合図です。
+                </div>
+                {signals.map((c) => (
+                  <div key={c.text} className="cand">
+                    <span className="t" style={{ fontWeight: 600 }}>{c.text}</span>
+                    <button className="chip-btn soft" onClick={() => startFraming(c.text)}>
+                      問いにする
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {questions.length === 0 && signals.length === 0 && (
+              <div className="card-meta">
+                こちらでは決断の候補を絞りきれませんでした。書き出すこと自体に意味があります。
+                決めたいことが頭にあるなら、下から問いにできます。
+              </div>
+            )}
+
+            <button className="btn primary" style={{ marginTop: 14 }} onClick={() => startFraming("")}>
+              この書き出しから決断をつくる
+            </button>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn half" onClick={() => { setText(""); setCandidates(null); setAdded({}); }}>
+                続けて書く
+              </button>
+              <button className="btn half" onClick={() => router.push("/")}>ホームへ</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {recentEntries.length > 0 && (
         <>
