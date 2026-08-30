@@ -15,8 +15,7 @@ import {
   addAppTurn,
   addUserTurn,
   emptyBrainstorm,
-  nextPrompt,
-  closingText,
+  fallbackPrompt,
   readyToDecide,
   transcript,
   type BrainstormState,
@@ -49,8 +48,8 @@ export default function JournalPage() {
     else
       setState((s) => {
         if (s.turns.length > 0) return s;
-        const opening = nextPrompt(s);
-        return opening ? addAppTurn(s, opening.text, opening.key) : s;
+        const opening = fallbackPrompt(s);
+        return addAppTurn(s, opening.text, opening.key);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -80,14 +79,15 @@ export default function JournalPage() {
       if (savedRef.current) store.updateJournalEntry(savedRef.current, body);
       else savedRef.current = store.addJournalEntry(body).id;
 
-      // 何を確かめるかはルールが決める。出し切っていれば締めて、決断へ渡す
-      const prompt = nextPrompt(withUser);
+      // 会話はAIが進める。ルールはAIが使えないときの代役と、候補の抽出だけ
+      const fallback = fallbackPrompt(withUser);
       const [reply, candidates] = await Promise.all([
-        prompt ? assistBrainstorm(withUser, prompt) : Promise.resolve(closingText),
+        assistBrainstorm(withUser, fallback),
         assistExtract(body),
       ]);
       setExtra(candidates);
-      setState((s) => addAppTurn(s, reply, prompt?.key));
+      // 代役の問いを実際に出したときだけ、既出として記録する
+      setState((s) => addAppTurn(s, reply, reply === fallback.text ? fallback.key : undefined));
     } finally {
       setThinking(false);
     }

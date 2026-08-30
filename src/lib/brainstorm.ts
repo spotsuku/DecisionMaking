@@ -1,15 +1,17 @@
-// 書き出しを「一人で書く」から「話しながら絞り込む」へ変える。
+// 迷いを書き出す段階の会話。
 //
-// 役割の線引きは診断と同じ:
-//   このアプリは答えを出さない。助言もしない。
-//   まだ分かっていないことを1つずつ聞き、決めるべきことを一緒に浮かび上がらせる。
-//   決めるのは本人(INV-05)。
+// ここは診断と役割が違う。
+//   診断(4.2/4.6)は、決める問いが定まったあとに成立条件を埋める工程なので、
+//   何を聞くかをルールが決める。順序も打ち切りも決まっている。
+//   一方この段階は、まだ何を決めるかも分かっていない。台本どおりに問いを並べると
+//   会話が不自然になり、本人が話したいことから引き剥がしてしまう。
+//   だから会話そのものはAIに任せ、ルールは背後で決断候補を拾うことに徹する。
 //
-// 設計の要点:
-//   聞いた問いは「キー」で覚える。文面ではなくキーで管理しないと、
-//   AIが言い換えた瞬間に「もう聞いた」が分からなくなり、同じことを永久に聞き続ける。
-//   問いは順序つきの一覧で、条件を満たす未使用のものを上から選ぶ。
-//   出し切ったら null を返し、会話を閉じて決断へ渡す。
+// このファイルが持つのは2つだけ:
+//   1. 会話の記録と、そこから取り出した決断候補
+//   2. AIが使えないときの定型の問い(会話を止めないための最低限)
+//
+// 変わらない線引き: 答えを出さない。助言もしない。決めるのは本人(6.1 / INV-05)。
 
 import { extractCandidates, type Candidate } from "./journal";
 
@@ -37,7 +39,6 @@ const userTurns = (s: BrainstormState) => s.turns.filter((t) => t.from === "USER
 
 export interface Prompt {
   key: string;
-  /** AIに渡す「この問いで何を確かめたいか」。文面の言い換えはAIに任せる */
   intent: string;
   text: string;
   /** この問いを出してよい条件 */
@@ -45,10 +46,11 @@ export interface Prompt {
 }
 
 /**
- * 上から順に、条件を満たす未使用の問いを選ぶ。
- * 前半は広げる問い、後半は1件に寄せてから輪郭を確かめる問い。
+ * AIが使えないときの問い。上から順に、条件を満たす未使用のものを選ぶ。
+ * これは会話の代役であって、設計の主役ではない。
+ * AIが動いているときは使われない。
  */
-const PROMPTS: Prompt[] = [
+const FALLBACK_PROMPTS: Prompt[] = [
   {
     key: "more",
     intent: "他に抱えている決めごとを引き出す",
@@ -102,21 +104,23 @@ const OPENING: Prompt = {
   when: () => true,
 };
 
-const CLOSING =
-  "ひと通り出ましたね。下に並んだ中から、いま決めるものを1つ選んでください。まだ話したければ続けても大丈夫です。";
+/** 定型の問いを出し切ったあと。会話は終わらせず、開いたまま続ける */
+const OPEN_ENDED: Prompt = {
+  key: "open",
+  intent: "話を続けてもらう",
+  text: "もう少し聞かせてください。その件で、いま一番引っかかっているのはどこですか?",
+  when: () => true,
+};
 
 /**
- * 次の問いを返す。出し切っていれば null。
+ * AIが応答できないときの問い。会話を止めないための代役。
  * 文面ではなくキーで既出を判定するので、AIが言い換えても重複しない。
  */
-export function nextPrompt(state: BrainstormState): Prompt | null {
+export function fallbackPrompt(state: BrainstormState): Prompt {
   if (state.turns.length === 0) return OPENING;
   const asked = new Set(state.asked);
-  return PROMPTS.find((p) => !asked.has(p.key) && p.when(state)) ?? null;
+  return FALLBACK_PROMPTS.find((p) => !asked.has(p.key) && p.when(state)) ?? OPEN_ENDED;
 }
-
-/** 出し切ったあとに出す締めの文 */
-export const closingText = CLOSING;
 
 /** 会話全体から決断候補を取り直す(あとの発言で表現が整うことがある) */
 export function refreshCandidates(state: BrainstormState): Candidate[] {
@@ -145,8 +149,13 @@ export function readyToDecide(state: BrainstormState): boolean {
   return state.candidates.length > 0 && userTurns(state) >= 2;
 }
 
-/** すでに確かめたことを、AIへ渡すための言葉にする */
-export function coveredTopics(state: BrainstormState): string[] {
-  const byKey = new Map([...PROMPTS, OPENING].map((p) => [p.key, p.intent]));
-  return state.asked.map((k) => byKey.get(k) ?? k);
-}
+/**
+ * 会話の中で見えてくると、あとの診断が楽になること。
+ * AIには「必ず聞け」ではなく「見えてきたら拾って」として渡す。
+ */
+export const USEFUL_TO_SURFACE = [
+  "いつまでに決まっていないと困るか",
+  "本人一人で決められるのか、誰かの合意が要るのか",
+  "詰まっているのは情報が足りないからか、決めたあとが不安だからか",
+  "決めずに置いたままだと何が起きるか",
+];

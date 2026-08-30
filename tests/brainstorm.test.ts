@@ -5,19 +5,18 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  addAppTurn, addUserTurn, coveredTopics, emptyBrainstorm, nextPrompt,
-  readyToDecide, transcript, type BrainstormState,
+  addAppTurn, addUserTurn, emptyBrainstorm, fallbackPrompt,
+  readyToDecide, transcript, USEFUL_TO_SURFACE, type BrainstormState,
 } from "../src/lib/brainstorm";
 
 /** 実際の会話のように、問いを出して答えるを繰り返す */
 function converse(said: string[], rewriteByAi = false): BrainstormState {
   let s = emptyBrainstorm();
-  const opening = nextPrompt(s)!;
+  const opening = fallbackPrompt(s);
   s = addAppTurn(s, opening.text, opening.key);
   for (const text of said) {
     s = addUserTurn(s, text);
-    const p = nextPrompt(s);
-    if (!p) break;
+    const p = fallbackPrompt(s);
     // AIが文面を書き換えても、キーで既出が分かること
     s = addAppTurn(s, rewriteByAi ? `${p.text}(AIが言い換えた文)` : p.text, p.key);
   }
@@ -40,24 +39,24 @@ describe("同じことを二度聞かない", () => {
     expect(s.asked).toEqual(["deadline"]);
   });
 
-  it("聞いた問いは、次の候補から外れる", () => {
+  it("出した問いは、次の候補から外れる", () => {
     let s = addUserTurn(emptyBrainstorm(), "犬を飼うか迷う");
-    const first = nextPrompt(s)!;
+    const first = fallbackPrompt(s);
     s = addAppTurn(s, first.text, first.key);
-    expect(nextPrompt(s)?.key).not.toBe(first.key);
+    expect(fallbackPrompt(s).key).not.toBe(first.key);
   });
 });
 
 describe("会話が前へ進む", () => {
-  it("問いを出し切ったら null を返し、締めへ移る", () => {
+  it("定型を出し切っても会話は終わらせず、開いた問いを返す", () => {
     let s = converse(["犬を飼うか迷う", "転職も決めきれない", "犬の方", "今週まで", "自分で決められる", "不安だから", "何も進まない"]);
-    // 残りの問いも消費する
     for (let i = 0; i < 10; i++) {
-      const p = nextPrompt(s);
-      if (!p) break;
+      const p = fallbackPrompt(s);
       s = addAppTurn(addUserTurn(s, `答え${i}`), p.text, p.key);
     }
-    expect(nextPrompt(s)).toBeNull();
+    const last = fallbackPrompt(s);
+    expect(last.key).toBe("open");
+    expect(last.text).toBeTruthy();
   });
 
   it("候補が2件以上あれば、どれが本命かを聞く段に入る", () => {
@@ -67,9 +66,9 @@ describe("会話が前へ進む", () => {
 
   it("候補が出ていないうちは、絞る問いを出さない", () => {
     let s = addUserTurn(emptyBrainstorm(), "うーん、特にないかな");
-    expect(nextPrompt(s)?.key).not.toBe("pick");
+    expect(fallbackPrompt(s).key).not.toBe("pick");
     s = addUserTurn(s, "強いて言えば疲れている");
-    expect(nextPrompt(s)?.key).not.toBe("pick");
+    expect(fallbackPrompt(s).key).not.toBe("pick");
   });
 });
 
@@ -93,10 +92,10 @@ describe("候補の抽出", () => {
 });
 
 describe("AIへ渡す情報", () => {
-  it("すでに確かめたことを、言葉にして渡せる", () => {
-    let s = addAppTurn(emptyBrainstorm(), "いつまでに?", "deadline");
-    s = addAppTurn(s, "誰が決める?", "owner");
-    expect(coveredTopics(s)).toEqual(["決断の期限を確かめる", "決定権が本人にあるかを確かめる"]);
+  it("診断で効いてくる論点を、AIへの手がかりとして渡せる", () => {
+    expect(USEFUL_TO_SURFACE.length).toBeGreaterThan(0);
+    // 命令ではなく論点なので、疑問符で終わる問い文にはしない
+    for (const u of USEFUL_TO_SURFACE) expect(u, u).not.toMatch(/[?？]$/);
   });
 });
 
@@ -114,8 +113,7 @@ describe("助言をしない(役割の線引き)", () => {
     const advice = /した方(がいい|が良い)|すべきです|おすすめ|良いと思います|正解/;
     let s = emptyBrainstorm();
     for (let i = 0; i < 12; i++) {
-      const p = nextPrompt(s);
-      if (!p) break;
+      const p = fallbackPrompt(s);
       expect(p.text, p.text).not.toMatch(advice);
       expect(/[?？。]$/.test(p.text), p.text).toBe(true);
       s = addAppTurn(addUserTurn(s, `犬を飼うかどうか${i}`), p.text, p.key);
@@ -129,8 +127,7 @@ describe("問いが話題を奪わない", () => {
     const presumes = /仕事以外|プライベート|家庭では|職場では/;
     let s = emptyBrainstorm();
     for (let i = 0; i < 12; i++) {
-      const p = nextPrompt(s);
-      if (!p) break;
+      const p = fallbackPrompt(s);
       expect(p.text, p.text).not.toMatch(presumes);
       s = addAppTurn(addUserTurn(s, `答え${i}`), p.text, p.key);
     }
