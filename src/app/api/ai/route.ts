@@ -4,12 +4,26 @@
 // 失敗したらエラーを返し、呼び出し側はルールベースの結果で続行する。
 
 import { NextResponse } from "next/server";
-import { callModel } from "@/lib/ai/provider";
+import { activeProvider, callModel, modelFor } from "@/lib/ai/provider";
 import { brainstormPrompt, extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
 import type { AiRequest, BrainstormResult, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;
+
+/**
+ * 設定の確認用。鍵そのものは返さず、「どの提供元が有効か」だけを返す。
+ * デプロイ後に環境変数が効いているかを、鍵を触らずに確かめられる。
+ */
+export function GET() {
+  const provider = activeProvider();
+  return NextResponse.json({
+    provider,
+    models: provider ? { chat: modelFor("chat"), cheap: modelFor("cheap") } : null,
+    // 提供元が無くても、ルールベースで全機能が動く
+    fallback: provider === null ? "rule-based" : null,
+  });
+}
 
 /** 1回の投稿に載せられる本文の長さ。原価と滞留時間の上限 */
 const MAX_INPUT_CHARS = 4000;
