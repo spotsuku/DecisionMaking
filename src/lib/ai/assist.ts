@@ -7,6 +7,7 @@
 import { extractCandidates, type Candidate } from "../journal";
 import { splitFreeText, type ChatTurn, type QuestionDef } from "../diagnosis";
 import { mergeCandidates, mergeSplit } from "./merge";
+import { isAiEnabled } from "../settings";
 import type { AiRequest, AiEnvelope, ExtractResult, ReplyResult, SourcedCandidate, SplitResult } from "./types";
 
 /** AIを待つ上限。これを超えたらルールの結果で進む */
@@ -15,7 +16,7 @@ const TIMEOUT_MS = 8000;
 let aiDisabled = false;
 
 async function post<T>(body: AiRequest): Promise<T | null> {
-  if (aiDisabled) return null;
+  if (aiDisabled || !isAiEnabled()) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {

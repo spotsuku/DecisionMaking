@@ -2,10 +2,14 @@
 
 // あなたのパターン: 観察できる記録だけから可能性を示す。人格の診断ではない。
 
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useDB } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { computeIntegrity, detectSelectiveAttribution } from "@/lib/drift";
 import { BLOCKER_LABEL } from "@/lib/types";
+import { isAiEnabled, setAiEnabled } from "@/lib/settings";
+import { IconChevron } from "@/components/icons";
 
 const METRIC_LABEL: Record<string, string> = {
   clarity: "明確性",
@@ -17,6 +21,10 @@ const METRIC_LABEL: Record<string, string> = {
 };
 
 export default function IdentityPage() {
+  // localStorage はサーバー描画では読めないので、描画後に反映する
+  const [aiOn, setAiOn] = useState(true);
+  useEffect(() => setAiOn(isAiEnabled()), []);
+
   const db = useDB();
   const integrity = computeIntegrity(db);
   const attribution = detectSelectiveAttribution(db);
@@ -103,6 +111,41 @@ export default function IdentityPage() {
           </p>
         </>
       )}
+
+      <div className="section">設定</div>
+      <label className="check-row">
+        <input
+          type="checkbox"
+          checked={aiOn}
+          onChange={(e) => {
+            setAiEnabled(e.target.checked);
+            setAiOn(e.target.checked);
+          }}
+        />
+        <span>
+          AIの提案を使う
+          <br />
+          <span className="card-meta">
+            書き出しと診断の本文が Claude API へ送られます。切っても、ルールベースの提案と
+            診断はそのまま使えます。
+          </span>
+        </span>
+      </label>
+
+      <div style={{ marginTop: 14 }}>
+        {[
+          { label: "プライバシーポリシー", href: "/legal/privacy" },
+          { label: "利用規約", href: "/legal/terms" },
+          { label: "特定商取引法に基づく表示", href: "/legal/tokushoho" },
+        ].map((m) => (
+          <Link key={m.href} href={m.href}>
+            <span className="menu-row">
+              {m.label}
+              <span className="chev"><IconChevron /></span>
+            </span>
+          </Link>
+        ))}
+      </div>
 
       <div className="footer-note">
         決断履歴は削除・上書きできません(履歴の不変性)。データはこの端末に保存されます。
