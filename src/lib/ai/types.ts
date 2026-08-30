@@ -41,12 +41,8 @@ export interface BrainstormRequest {
   task: "brainstorm";
   /** これまでのやりとり(古い順) */
   turns: { from: "USER" | "APP"; text: string }[];
-  /** AIが応答できないときに使う定型文 */
+  /** AIが応答できないときに使う定型文(プロンプトには渡さない) */
   fallback: string;
-  /** 会話から見えてくると、あとの診断が楽になること(必須ではない) */
-  useful: string[];
-  /** ここまでに見つかっている候補 */
-  candidates: string[];
 }
 export interface BrainstormResult { text: string }
 

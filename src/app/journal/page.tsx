@@ -82,7 +82,7 @@ export default function JournalPage() {
       // 会話はAIが進める。ルールはAIが使えないときの代役と、候補の抽出だけ
       const fallback = fallbackPrompt(withUser);
       const [reply, candidates] = await Promise.all([
-        assistBrainstorm(withUser, fallback),
+        assistBrainstorm(withUser, fallback, text),
         assistExtract(body),
       ]);
       setExtra(candidates);

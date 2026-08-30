@@ -6,7 +6,8 @@
 
 import { extractCandidates, type Candidate } from "../journal";
 import { splitFreeText, type ChatTurn, type QuestionDef } from "../diagnosis";
-import { USEFUL_TO_SURFACE, type BrainstormState, type Prompt } from "../brainstorm";
+import type { BrainstormState, Prompt } from "../brainstorm";
+import { checkReply, shouldReject } from "./replyCheck";
 import { mergeCandidates, mergeSplit } from "./merge";
 import { isAiEnabled } from "../settings";
 import type { AiRequest, AiEnvelope, BrainstormResult, ExtractResult, ReplyResult, SourcedCandidate, SplitResult } from "./types";
@@ -88,15 +89,23 @@ export async function assistSplit(
  * 本人が話したいことから引き剥がしてしまうため。
  * 返らなければ定型文を使うので、AIが無くても会話は続く。
  */
-export async function assistBrainstorm(state: BrainstormState, fallback: Prompt): Promise<string> {
+export async function assistBrainstorm(
+  state: BrainstormState,
+  fallback: Prompt,
+  said: string
+): Promise<string> {
   const ai = await post<BrainstormResult>({
     task: "brainstorm",
     turns: state.turns,
     fallback: fallback.text,
-    useful: USEFUL_TO_SURFACE,
-    candidates: state.candidates.map((c) => c.text),
   });
   const text = ai?.text?.trim();
-  if (!text || text.length > 200) return fallback.text;
-  return text;
+  if (!text) return fallback.text;
+
+  // 画面が壊れるものだけ差し戻す。文体の崩れは記録に留める ──
+  // 差し戻すと会話が切れて定型文に落ち、かえって不自然になるため
+  const lastApp = [...state.turns].reverse().find((t) => t.from === "APP")?.text;
+  const issue = checkReply(text, said, lastApp);
+  if (issue) console.warn("[ai] 応答の崩れ", issue.code, issue.detail);
+  return shouldReject(issue) ? fallback.text : text;
 }
