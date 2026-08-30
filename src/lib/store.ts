@@ -626,6 +626,19 @@ class Store {
 
   // ------------------------------------------------------------ ジャーナリング
 
+  /**
+   * 書き出しの本文を更新する。会話しながら書くので、
+   * 1回のやりとりごとに新しい記録を作ると履歴が細切れになる。
+   * 書き出しは決断そのものではないので、追記のみの対象外(INV-01は決断の履歴)。
+   */
+  updateJournalEntry(id: string, text: string) {
+    this.load();
+    const entry = this.db.journal.find((x) => x.id === id);
+    if (!entry) return;
+    entry.text = text;
+    this.persist();
+  }
+
   addJournalEntry(text: string) {
     this.load();
     const entry = { id: uid(), text, createdAt: now() };

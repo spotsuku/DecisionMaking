@@ -1,7 +1,7 @@
 // プロンプト。役割は「本人の言葉から候補を出す」ことだけに絞る。
 // 断定しない・要約で意味を足さない・本人の言葉を書き換えない(INV-04 / 6.3)。
 
-import type { ExtractRequest, ReplyRequest, SplitRequest } from "./types";
+import type { BrainstormRequest, ExtractRequest, ReplyRequest, SplitRequest } from "./types";
 
 const COMMON = `あなたは意思決定支援アプリの補助です。次の制約を必ず守ってください。
 - 本人が書いていないことを足さない。推測で内容を補わない。
@@ -61,5 +61,39 @@ export function splitPrompt(req: SplitRequest) {
 
 出力: {"values":{"${req.parts[0].key}":"..."}}`,
     user: req.said,
+  };
+}
+
+const STAGE_ROLE = {
+  SPREAD: "まだ出しきれていない。他に引っかかっていることを引き出す問いを1つ。",
+  NARROW: "複数出てきた。どれが本命かを本人に選ばせる問いを1つ。",
+  SHARPEN: "1つに寄ってきた。期限・決定権・詰まっている理由のどれかを1つだけ確かめる。",
+} as const;
+
+export function brainstormPrompt(req: BrainstormRequest) {
+  const log = req.turns
+    .map((t) => `${t.from === "USER" ? "本人" : "あなた"}: ${t.text}`)
+    .join("\n");
+  return {
+    system: `${COMMON}
+
+これは「決めきれていないことを本人に吐き出してもらう」対話です。
+あなたの役割: ${STAGE_ROLE[req.stage]}
+
+必ず守ること:
+- 助言・提案・評価をしない。「〜した方がいい」「それは良いですね」は書かない。
+- 答えを出さない。決めるのは本人です。
+- 本人が言った言葉を1つだけ拾って受け止めてから、問いを1つ返す。
+- 2文まで。問いは1つだけ。
+- 本人が話していない事情を推測して書かない。
+- 落ち着いた敬体。励ましすぎない。
+
+うまく作れないときは、次の文をそのまま返してください:
+${req.fallback}
+
+${req.candidates.length > 0 ? `本人の言葉から見えている決めごと:\n- ${req.candidates.join("\n- ")}` : ""}
+
+出力: {"text":"..."}`,
+    user: log || "(まだ発言はありません)",
   };
 }

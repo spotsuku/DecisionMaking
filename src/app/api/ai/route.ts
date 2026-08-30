@@ -5,8 +5,8 @@
 
 import { NextResponse } from "next/server";
 import { callAnthropic, MODELS } from "@/lib/ai/anthropic";
-import { extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
-import type { AiRequest, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
+import { brainstormPrompt, extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
+import type { AiRequest, BrainstormResult, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;
@@ -23,7 +23,11 @@ export async function POST(request: Request) {
   }
 
   const text =
-    body.task === "extract" ? body.text : body.task === "reply" ? body.said : body.said;
+    body.task === "extract"
+      ? body.text
+      : body.task === "brainstorm"
+      ? body.turns.map((t) => t.text).join("\n")
+      : body.said;
   if (typeof text !== "string" || text.trim() === "") {
     return NextResponse.json({ ok: false, result: null, error: "empty" }, { status: 400 });
   }
@@ -40,6 +44,11 @@ export async function POST(request: Request) {
     if (body.task === "reply") {
       const { system, user } = replyPrompt(body);
       const r = await callAnthropic<ReplyResult>({ model: MODELS.chat, system, user, maxTokens: 300 });
+      return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
+    }
+    if (body.task === "brainstorm") {
+      const { system, user } = brainstormPrompt(body);
+      const r = await callAnthropic<BrainstormResult>({ model: MODELS.chat, system, user, maxTokens: 300 });
       return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
     }
     if (body.task === "split") {

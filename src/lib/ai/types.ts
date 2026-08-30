@@ -3,7 +3,7 @@
 
 import type { Candidate } from "../journal";
 
-export type AiTask = "extract" | "reply" | "split";
+export type AiTask = "extract" | "reply" | "split" | "brainstorm";
 
 /** どこから出てきた提案かを画面で区別できるようにする */
 export type Source = "RULE" | "AI";
@@ -37,7 +37,20 @@ export interface SplitRequest {
 }
 export interface SplitResult { values: Record<string, string> }
 
-export type AiRequest = ExtractRequest | ReplyRequest | SplitRequest;
+export interface BrainstormRequest {
+  task: "brainstorm";
+  /** これまでのやりとり(古い順) */
+  turns: { from: "USER" | "APP"; text: string }[];
+  /** ルールが決めた段階。AIはこの意図の範囲で言い換える */
+  stage: "SPREAD" | "NARROW" | "SHARPEN";
+  /** ルールの定型文。使えないときはこれに戻す */
+  fallback: string;
+  /** ここまでに見つかっている候補 */
+  candidates: string[];
+}
+export interface BrainstormResult { text: string }
+
+export type AiRequest = ExtractRequest | ReplyRequest | SplitRequest | BrainstormRequest;
 
 export interface AiEnvelope<T> {
   ok: boolean;
