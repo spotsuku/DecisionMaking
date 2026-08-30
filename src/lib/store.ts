@@ -225,7 +225,7 @@ class Store {
     questionId: string,
     answerText: string,
     answerJson: Record<string, string> = {},
-    opts: { skipped?: boolean; mode?: AnswerMode } = {}
+    opts: { skipped?: boolean; mode?: AnswerMode; rawText?: string } = {}
   ): DiagnosticAnswer {
     this.load();
     const q = this.db.questions.find((x) => x.id === questionId);
@@ -237,6 +237,7 @@ class Store {
       questionCode: q.questionCode,
       answerText,
       answerJson,
+      rawText: opts.rawText,
       skipped: opts.skipped ?? false,
       mode: opts.mode ?? "FORM",
       submittedAt: now(),

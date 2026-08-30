@@ -11,6 +11,10 @@ import {
   splitFreeText,
   joinParts,
   assessGaps,
+  isNonAnswer,
+  chatReply,
+  emptyChatState,
+  type ChatState,
 } from "../src/lib/diagnosis";
 import { emptyDB, type DB, type DecisionVersion, type EvidenceItem } from "../src/lib/types";
 
@@ -216,5 +220,68 @@ describe("スキップした回答(わからないで飛ばす)", () => {
     expect(execution.missing).toBe(true);
     // 同じ質問は繰り返さない
     expect(selectNextQuestion(db, v, new Date().toISOString())?.code).not.toBe("Q_ACTION_24H");
+  });
+});
+
+describe("チャットの受け答え(噛み合わせ)", () => {
+  const q = (code: string) => QUESTION_BANK.find((x) => x.code === code)!;
+
+  it("内容のない返事を見分ける", () => {
+    for (const t of ["それが分からない", "わからない", "わかんないです", "特にない", "思いつかない", "不明", "うーん"]) {
+      expect(isNonAnswer(t), t).toBe(true);
+    }
+  });
+
+  it("「分からない」を含んでいても、中身のある文は答えとして扱う", () => {
+    for (const t of [
+      "分からないのは世話にかかる時間です",
+      "妻がどう思うか分からないので、まず聞いてみたい",
+      "わからないことが多いが、費用だけは調べた",
+    ]) {
+      expect(isNonAnswer(t), t).toBe(false);
+    }
+  });
+
+  it("受入テスト: 「それが分からない」を欄に入れず、言い換えて聞き直す", () => {
+    const r = chatReply(q("Q_INFO_STOP"), emptyChatState(), "それが分からない");
+    expect(r.turn.kind).toBe("REPHRASE");
+    expect(r.values).toEqual({}); // 記録しない
+  });
+
+  it("言い換えても答えが出なければ、分からないまま記録して先へ進む", () => {
+    const state = { ...emptyChatState(), rephrased: true };
+    const r = chatReply(q("Q_INFO_STOP"), state, "やっぱり分からない");
+    expect(r.turn.kind).toBe("SKIP");
+  });
+
+  it("必須の欄が空のまま次の質問へ進まず、その欄だけを聞き直す", () => {
+    const r = chatReply(q("Q_CRITERIA"), emptyChatState(), "守りたいのは家族との時間");
+    expect(r.turn.kind).toBe("FOLLOW_UP");
+    expect(r.turn.kind === "FOLLOW_UP" && r.turn.partKey).toBe("giveup");
+    expect(r.values.protect).toBe("守りたいのは家族との時間");
+  });
+
+  it("聞き直した欄に答えると記録して次へ進む", () => {
+    const state: ChatState = { values: { protect: "家族との時間" }, rephrased: false, askingPart: "giveup" };
+    const r = chatReply(q("Q_CRITERIA"), state, "年収の上積み");
+    expect(r.turn.kind).toBe("FILED");
+    expect(r.values).toEqual({ protect: "家族との時間", giveup: "年収の上積み" });
+  });
+
+  it("聞き直した欄が分からなくても、答えた分は残して先へ進む", () => {
+    const state: ChatState = { values: { protect: "家族との時間" }, rephrased: false, askingPart: "giveup" };
+    const r = chatReply(q("Q_CRITERIA"), state, "分からない");
+    expect(r.turn.kind).toBe("FILED");
+    expect(r.values).toEqual({ protect: "家族との時間" });
+  });
+
+  it("任意の欄は空でも聞き直さない", () => {
+    const r = chatReply(q("Q_FEELING"), emptyChatState(), "楽しみだけど責任が怖い");
+    expect(r.turn.kind).toBe("FILED");
+  });
+
+  it("一度に両方答えた場合は聞き直さない", () => {
+    const r = chatReply(q("Q_CRITERIA"), emptyChatState(), "守りたいのは家族の時間。諦めていいのは年収。");
+    expect(r.turn.kind).toBe("FILED");
   });
 });

@@ -24,6 +24,8 @@ export interface QuestionPart {
   placeholder?: string;
   /** 空欄のまま次へ進めるか */
   optional?: boolean;
+  /** この欄だけを聞き直すときの問いかけ */
+  followUp?: string;
   /**
    * チャットの自由文を欄へ振り分ける手掛かり。
    * 本人の言葉の中に現れた語だけを見る。推測で内容を足さない(6.3)。
@@ -38,6 +40,8 @@ export interface QuestionDef {
   text: string;
   purpose: string;
   parts: QuestionPart[];
+  /** 「分からない」と返ってきたときの、答えやすい言い換え */
+  rephrase?: string;
   /** 未確定の必須フィールドに対応するか */
   requiredField: boolean;
   emotionalLoad: number; // 0-2
@@ -49,6 +53,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "QUESTION",
     text: "いま考えていることは、何を決める話ですか?",
     purpose: "何を決めるかを一文で確定する",
+    rephrase: "うまく一文にならなくて大丈夫です。いま頭にあることを、そのまま話してみてください。",
     parts: [{ key: "question", label: "決めること", placeholder: "例: 犬を家に迎えるかどうか" }],
     requiredField: true,
     emotionalLoad: 0,
@@ -58,6 +63,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "AGENCY",
     text: "この件は、誰が決めますか?",
     purpose: "決定権と責任範囲を確定する",
+    rephrase: "決める人がはっきりしないのですね。では、あなたが「やる / やらない」を言える部分はどこですか?",
     parts: [
       {
         key: "owner", label: "最終的に決める人", placeholder: "例: 自分 / 妻と相談 / 決裁は役員",
@@ -65,6 +71,7 @@ export const QUESTION_BANK: QuestionDef[] = [
       },
       {
         key: "scope", label: "あなたが決められる範囲", placeholder: "例: 予算50万円まではこちらで決められる",
+        followUp: "そのうち、あなた一人で決められる範囲はどこまでですか?",
         cues: [/権限|裁量|範囲/, /まで(は|なら)/, /予算|承認|決裁/, /(までは|なら).*(自分|こちら|一人)/],
       },
     ],
@@ -76,6 +83,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "QUESTION",
     text: "いつまでに決めますか?",
     purpose: "決断期限と、超過したときに起きることを確定する",
+    rephrase: "期限が決まっていないのですね。では、いつまでに決まっていないと困りますか?",
     parts: [
       {
         key: "due", label: "決める期限", placeholder: "例: 今週の金曜まで",
@@ -83,6 +91,7 @@ export const QUESTION_BANK: QuestionDef[] = [
       },
       {
         key: "consequence", label: "その日を過ぎると何が起きるか", placeholder: "例: 契約が自動更新される",
+        followUp: "その日を過ぎると、何が起きますか?",
         cues: [/過ぎる|超える|遅れる|間に合わ/, /しないと|なければ|逃す|失う|失効|更新|流れる/, /(なって|になり)しまう/],
       },
     ],
@@ -94,14 +103,17 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "VALUE",
     text: "この選択で、何を守り、何を諦めますか?",
     purpose: "判断基準とトレードオフを言語化する",
+    rephrase: "物差しを言葉にするのは難しいですよね。では、どちらを選んでも絶対に手放したくないものは何ですか?",
     parts: [
       {
         key: "protect", label: "守りたいもの",
+        followUp: "この件で、守りたいものは何ですか?",
         placeholder: "例: 家族との時間",
         cues: [/守(る|り|りたい)/, /大事|大切|重要|優先|必要/, /譲れない|欠かせない|外せない/],
       },
       {
         key: "giveup", label: "諦めてもいいもの",
+        followUp: "逆に、諦めてもいいものは何ですか?",
         placeholder: "例: 年収の上積み",
         cues: [/諦め|あきらめ/, /捨て|手放|妥協|我慢|目をつむ/, /(譲|割り切)(る|って|れる|り)/, /なくてもいい|でもいい|構わない/],
       },
@@ -114,14 +126,17 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "RECOGNITION",
     text: "何が分かれば、判断が変わりますか?",
     purpose: "不足情報と情報収集の停止条件を定義する",
+    rephrase: "何が足りないか自体が見えていないのですね。では、いまいちばん自信がないのはどの部分ですか?",
     parts: [
       {
         key: "missing", label: "分かれば評価が変わること",
+        followUp: "分かれば評価が変わりそうなことは、何ですか?",
         placeholder: "例: 世話にかかる実際の時間",
         cues: [/分かれ(ば|たら)|知りたい|確かめ|確認したい/, /分からない|不明|見えない|把握できて/],
       },
       {
         key: "stop", label: "これ以上調べても変わらない条件",
+        followUp: "どこまで分かったら、それ以上は調べないと決めますか?",
         placeholder: "例: 見学2件まで。それ以上は調べない",
         cues: [/それ以上|これ以上/, /(止め|やめ|打ち切|切り上げ)(る|ます|た)/, /まで(で|に)?(いい|十分|終わり)/, /十分|そろえば|集まれば/],
       },
@@ -134,6 +149,7 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "EXECUTION",
     text: "24時間以内にできる、外部世界に向けた最小の行動は何ですか?",
     purpose: "選択を実行意図へ変換する",
+    rephrase: "大きく動かなくて大丈夫です。誰かに一言送る、日程を1つ押さえる、くらいなら何ができますか?",
     parts: [
       { key: "action", label: "最小の行動", placeholder: "例: ブリーダーに見学を申し込む" },
     ],
@@ -145,14 +161,17 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "RECOGNITION",
     text: "選んだ案がうまくいかないとしたら?",
     purpose: "ネガティブ予測と損失上限を先に言語化する",
+    rephrase: "予想がつかないのですね。では、あとで「あの時こうしていれば」と思いそうなことは何ですか?",
     parts: [
       {
         key: "path", label: "失敗する筋道",
+        followUp: "どういう筋道でうまくいかなくなりそうですか?",
         placeholder: "例: 世話が続かず家族に負担が偏る",
         cues: [/失敗|うまくいかな|続かな|崩れ|破綻|こじれ/, /負担|しわ寄せ|偏(る|って)/, /(たら|なると).*(困|まず|きつ)/],
       },
       {
         key: "loss", label: "引き受けられる損失の上限",
+        followUp: "そうなったとき、引き受けられる損失の上限はどこまでですか?",
         placeholder: "例: 月3万円と、平日の朝夕30分まで",
         cues: [/上限|限度|以内|まで(なら)?/, /損失|損|赤字|持ち出し/, /許容|引き受け|耐えられ|受け入れ/, /\d+(万|円|時間|分|ヶ月|か月|日|%)/],
       },
@@ -165,9 +184,11 @@ export const QUESTION_BANK: QuestionDef[] = [
     gap: "RECOGNITION",
     text: "この件を考えるとき、どんな気持ちになりますか?",
     purpose: "感情と情報を分けて扱う",
+    rephrase: "言葉にしにくいですよね。この件を思い出したとき、気持ちは軽いですか、重いですか?",
     parts: [
       {
         key: "feeling", label: "浮かぶ気持ち",
+        followUp: "この件を考えるとき、どんな気持ちが浮かびますか?",
         placeholder: "例: 楽しみだけど、責任が怖い",
         cues: [/不安|怖|こわ|楽しみ|嬉し|わくわく|しんどい|重い|焦|モヤ|イライラ|罪悪感|気持ち/],
       },
@@ -232,6 +253,106 @@ export function splitFreeText(def: QuestionDef, text: string): Record<string, st
     if (value) out[part.key] = value;
   }
   return out;
+}
+
+// ------------------------------------------------ チャットの受け答え(4.5)
+
+/**
+ * 「それが分からない」のような、内容を持たない返事。
+ * 質問の答えとして記録すると会話が噛み合わなくなるので、別扱いする。
+ * 「分からないのは世話の時間」のように中身のある文は対象外にしたいので、
+ * 全体が短く、かつ文全体が定型に一致する場合だけ true にする。
+ */
+const NON_ANSWER_MAX_LEN = 24;
+const NON_ANSWER_PATTERNS: RegExp[] = [
+  /^(それ|これ|そこ|そのへん|どこ)?[がはも]?(まだ|よく|全然|あんまり|あまり|正直)?(分|わ)か(ら|り)(ない|ません|ん)(です|ね|よ|な|なあ)?$/,
+  /^(まだ|よく|全然|正直)?(わかんない|わからん|不明|未定|微妙)(です|ね)?$/,
+  /^(特に|とくに|今は|いまは)?(ない|なし|無い|ありません|思いつかない|思いつきません|出てこない|浮かばない)(です|ね)?$/,
+  /^(答え|決め|言葉に|説明)(られない|られません|できない|できません)(です|ね)?$/,
+  /^(スキップ|パス|保留|後で|あとで)$/,
+  /^[うんーぇえあ]+$/,
+];
+
+export function isNonAnswer(text: string): boolean {
+  const t = text
+    .trim()
+    .replace(/^(えーと|えっと|ええと|うーん|あのー?|そのー?|まあ|なんか|やっぱり|やっぱ|やはり|どうしても|本当に|ほんとに)[、,\s]*/, "")
+    .replace(/[。、.,\s]+$/, "");
+  if (!t) return true;
+  if (t.length > NON_ANSWER_MAX_LEN) return false;
+  return NON_ANSWER_PATTERNS.some((p) => p.test(t));
+}
+
+/** チャットの次の一手 */
+export type ChatTurn =
+  | { kind: "REPHRASE"; text: string }
+  | { kind: "FOLLOW_UP"; partKey: string; text: string }
+  | { kind: "FILED"; text: string }
+  | { kind: "SKIP"; text: string };
+
+export interface ChatState {
+  /** ここまでに埋まった欄 */
+  values: Record<string, string>;
+  /** 言い換えて聞き直したか(1問につき1回まで) */
+  rephrased: boolean;
+  /** いま特定の欄を聞いている途中なら、その key */
+  askingPart: string | null;
+}
+
+export const emptyChatState = (): ChatState => ({ values: {}, rephrased: false, askingPart: null });
+
+function filedText(def: QuestionDef, values: Record<string, string>): string {
+  const filled = def.parts.filter((p) => (values[p.key] ?? "").trim() !== "");
+  if (def.parts.length === 1 || filled.length === 0) return "受け取りました。次に進みます。";
+  return `「${filled.map((p) => p.label).join("」「")}」として記録しました。違っていたら「欄ごとに書く」で直せます。`;
+}
+
+/**
+ * 本人の返事から、チャットの次の一手を決める。
+ *
+ *   1. 内容のない返事なら、まず言い換えて聞き直す(1問1回まで)。
+ *      それでも出てこなければ「分からない」ことを記録して先へ進む。
+ *   2. 答えが返ってきたら、必須の欄がまだ空いていれば、その欄だけを聞き直す。
+ *   3. 必須が埋まったら記録して次の質問へ。
+ *
+ * 状態は書き換えず、次の値を返すだけにする(画面側で確定する)。
+ */
+export function chatReply(
+  def: QuestionDef,
+  state: ChatState,
+  raw: string
+): { turn: ChatTurn; values: Record<string, string> } {
+  const text = raw.trim();
+
+  if (isNonAnswer(text)) {
+    // 欄を1つずつ聞いている途中なら、そこは空のままで、分かっている分を記録する
+    if (state.askingPart && Object.keys(state.values).length > 0) {
+      return { turn: { kind: "FILED", text: filedText(def, state.values) }, values: state.values };
+    }
+    if (!state.rephrased && def.rephrase) {
+      return { turn: { kind: "REPHRASE", text: def.rephrase }, values: state.values };
+    }
+    return {
+      turn: {
+        kind: "SKIP",
+        text: "分からないままで大丈夫です。ここは「まだ分かっていない」という記録にして、先に進みます。",
+      },
+      values: state.values,
+    };
+  }
+
+  const values = state.askingPart
+    ? { ...state.values, [state.askingPart]: text }
+    : { ...state.values, ...splitFreeText(def, text) };
+
+  const missing = def.parts.find((p) => !p.optional && (values[p.key] ?? "").trim() === "");
+  if (missing) {
+    return {
+      turn: { kind: "FOLLOW_UP", partKey: missing.key, text: missing.followUp ?? `${missing.label}は何ですか?` },
+      values,
+    };
+  }
+  return { turn: { kind: "FILED", text: filedText(def, values) }, values };
 }
 
 /** 記入欄の値を、履歴表示用の一本のテキストにまとめる */

@@ -292,9 +292,9 @@ input[type="checkbox"], input[type="radio"] {
 .bubble.q .purpose { font-size: 11px; color: var(--ink-soft); font-weight: 700; margin-bottom: 3px; letter-spacing: 0.04em; }
 .bubble.a { align-self: flex-end; background: var(--ink); color: #fff; }
 .bubble.a.skipped { background: var(--surface); color: var(--ink-soft); font-size: 12.5px; }
-.filed-note {
-  align-self: flex-end; max-width: 88%; font-size: 11px; color: var(--ink-faint);
-  margin-top: -4px; text-align: right; line-height: 1.5;
+.bubble.q.note {
+  background: transparent; padding: 0 4px; font-size: 11.5px;
+  color: var(--ink-faint); line-height: 1.6; margin-top: -4px;
 }
 
 /* 答え方の切り替え(チャット / 欄ごと) */

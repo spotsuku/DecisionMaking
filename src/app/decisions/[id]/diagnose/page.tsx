@@ -12,6 +12,10 @@ import {
   QUESTION_BANK,
   splitFreeText,
   joinParts,
+  chatReply,
+  isNonAnswer,
+  emptyChatState,
+  type ChatState,
   selectNextQuestion,
   assessGaps,
   assessBlockers,
@@ -36,6 +40,9 @@ export default function DiagnosePage() {
   const { db, decision, version } = useDecision();
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [chatDraft, setChatDraft] = useState("");
+  // 進行中の1問ぶんのやりとり。確定するまでは画面の中だけに持つ
+  const [chat, setChat] = useState<ChatState>(emptyChatState);
+  const [turns, setTurns] = useState<{ from: "USER" | "APP"; text: string }[]>([]);
   const [mode, setMode] = useState<AnswerMode>("CHAT");
   const [showLog, setShowLog] = useState(false);
 
@@ -46,8 +53,9 @@ export default function DiagnosePage() {
   }, []);
   const changeMode = (next: AnswerMode) => {
     // チャットで書きかけの文があれば、欄へ振り分けて引き継ぐ
-    if (next === "FORM" && current && chatDraft.trim()) {
-      setDraft((d) => ({ ...splitFreeText(current, chatDraft), ...stripEmpty(d) }));
+    if (next === "FORM" && current) {
+      const spoken = chatDraft.trim() ? splitFreeText(current, chatDraft) : {};
+      setDraft((d) => ({ ...chat.values, ...spoken, ...stripEmpty(d) }));
       setChatDraft("");
     }
     setMode(next);
@@ -94,6 +102,8 @@ export default function DiagnosePage() {
     .at(-1);
   const safety = classifySafety(decision.domain, answers.map((a) => a.answerText).join(" "));
 
+  // いま1つの欄だけを聞き直している最中か
+  const askingPart = current?.parts.find((p) => p.key === chat.askingPart) ?? null;
   // 先頭の欄が埋まっていれば次へ進める(任意欄で足止めしない)
   const canSubmit = !!current && (draft[current.parts[0].key] ?? "").trim() !== "";
 
@@ -107,15 +117,27 @@ export default function DiagnosePage() {
       gap: current!.gap,
     });
 
-  const saveAnswer = (values: Record<string, string>, answered: AnswerMode) => {
+  const resetTurn = () => {
+    setDraft({});
+    setChatDraft("");
+    setChat(emptyChatState());
+    setTurns([]);
+    refreshBlockers();
+  };
+
+  const saveAnswer = (
+    values: Record<string, string>,
+    answered: AnswerMode,
+    opts: { skipped?: boolean; rawText?: string } = {}
+  ) => {
     if (!current) return;
     const answerJson = stripEmpty(values);
     store.recordAnswer(ensureQuestion().id, joinParts(current, answerJson), answerJson, {
       mode: answered,
+      rawText: opts.rawText,
+      skipped: opts.skipped,
     });
-    setDraft({});
-    setChatDraft("");
-    refreshBlockers();
+    resetTurn();
   };
 
   const submitAnswer = () => {
@@ -123,19 +145,49 @@ export default function DiagnosePage() {
     saveAnswer(draft, "FORM");
   };
 
-  /** チャットの一続きの答えを、欄へ振り分けて保存する */
+  /**
+   * チャットの返事を受けて、次の一手を決める。
+   * 内容のない返事をそのまま欄へ入れると会話が噛み合わなくなるので、
+   * 聞き直す・欄を埋め直す・記録して次へ、を chatReply が振り分ける。
+   */
   const submitChat = () => {
     if (!current || !chatDraft.trim()) return;
-    saveAnswer(splitFreeText(current, chatDraft), "CHAT");
+    const said = chatDraft.trim();
+    const { turn, values } = chatReply(current, chat, said);
+    const spoken = [...turns, { from: "USER" as const, text: said }];
+    // 記録に残すのは中身のある発言だけ。「分からない」は聞き直しのきっかけであって答えではない
+    const rawText = spoken
+      .filter((t) => t.from === "USER" && !isNonAnswer(t.text))
+      .map((t) => t.text)
+      .join("\n");
+
+    if (turn.kind === "FILED") {
+      saveAnswer(values, "CHAT", { rawText });
+      return;
+    }
+    if (turn.kind === "SKIP") {
+      saveAnswer(values, "CHAT", { skipped: true, rawText });
+      return;
+    }
+    setTurns([...spoken, { from: "APP", text: turn.text }]);
+    setChat({
+      values,
+      rephrased: chat.rephrased || turn.kind === "REPHRASE",
+      askingPart: turn.kind === "FOLLOW_UP" ? turn.partKey : null,
+    });
+    setChatDraft("");
   };
 
   /** わからない質問は飛ばす。記録は残し、成立条件は埋まっていないままにする */
   const skipQuestion = () => {
     if (!current) return;
-    store.recordAnswer(ensureQuestion().id, "", {}, { skipped: true, mode });
-    setDraft({});
-    setChatDraft("");
-    refreshBlockers();
+    const rawText = turns
+      .filter((t) => t.from === "USER" && !isNonAnswer(t.text))
+      .map((t) => t.text)
+      .join("\n");
+    // すでに話してくれた分があれば、それは答えとして残す
+    const filed = Object.keys(stripEmpty(chat.values)).length > 0;
+    saveAnswer(chat.values, mode, { skipped: !filed, rawText: rawText || undefined });
   };
 
   function refreshBlockers() {
@@ -215,30 +267,29 @@ export default function DiagnosePage() {
                 {questions.map((q) => {
                   const a = answerFor(q.id);
                   const def = QUESTION_BANK.find((d) => d.code === q.questionCode);
+                  const said = a?.rawText || a?.answerText || "";
                   return (
                     <div key={q.id} style={{ display: "contents" }}>
                       <div className="bubble q">
                         <div className="purpose">{GAP_LABEL[q.gap]} — {q.purpose}</div>
                         {q.text}
                       </div>
-                      {a && (a.skipped ? (
-                        <div className="bubble a skipped">わからないので飛ばしました</div>
-                      ) : (
-                        <>
-                          <div className="bubble a">{a.answerText.split("\n").map((line, i) => (
-                            <div key={i}>{line}</div>
-                          ))}</div>
-                          {a.mode === "CHAT" && def && def.parts.length > 1 && (
-                            <div className="filed-note">
-                              {def.parts
-                                .filter((part) => a.answerJson[part.key])
-                                .map((part) => part.label)
-                                .join(" / ")}
-                              に振り分けました。違っていたら「欄ごとに書く」で直せます。
-                            </div>
-                          )}
-                        </>
-                      ))}
+                      {said && (
+                        <div className="bubble a">
+                          {said.split("\n").map((line, i) => <div key={i}>{line}</div>)}
+                        </div>
+                      )}
+                      {a?.skipped && (
+                        <div className="bubble q note">
+                          分からないままにしました。ここは「まだ分かっていない」という記録です。
+                        </div>
+                      )}
+                      {a && !a.skipped && def && def.parts.length > 1 && (
+                        <div className="bubble q note">
+                          「{def.parts.filter((part) => a.answerJson[part.key]).map((part) => part.label).join("」「")}」
+                          として記録しました。
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -248,21 +299,30 @@ export default function DiagnosePage() {
                     {current.text}
                   </div>
                 )}
+                {turns.map((t, i) =>
+                  t.from === "USER" ? (
+                    <div key={i} className="bubble a">{t.text}</div>
+                  ) : (
+                    <div key={i} className="bubble q">{t.text}</div>
+                  )
+                )}
               </div>
 
               <VoiceTextarea
                 rows={4}
                 value={chatDraft}
                 onChange={setChatDraft}
-                placeholder={`思いつくまま話してください。例: ${current.parts[0].placeholder?.replace(/^例: /, "") ?? ""}`}
+                placeholder={askingPart?.placeholder ?? `思いつくまま話してください。${current.parts[0].placeholder ?? ""}`}
               />
               <div className="hint" style={{ fontSize: 11.5, color: "var(--ink-faint)", margin: "4px 0 12px" }}>
-                {current.parts.length > 1
+                {askingPart
+                  ? `「${askingPart.label}」だけ教えてください。分からなければ飛ばせます。`
+                  : current.parts.length > 1
                   ? `答えを「${current.parts.map((part) => part.label).join("」「")}」の欄へ自動で振り分けます。あとから直せます。`
-                  : "話して入力もできます。回答は履歴に残ります。"}
+                  : "話して入力もできます。分からないときは、そのまま「分からない」と答えて大丈夫です。"}
               </div>
               <button className="btn primary" onClick={submitChat} disabled={!chatDraft.trim()}>
-                答えて次の質問へ
+                {askingPart ? "答える" : "答えて次の質問へ"}
               </button>
               <button className="btn ghost" style={{ marginTop: 4 }} onClick={skipQuestion}>
                 わからない・答えたくない(飛ばす)
