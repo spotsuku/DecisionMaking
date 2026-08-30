@@ -16,13 +16,14 @@ import {
   addUserTurn,
   emptyBrainstorm,
   fallbackPrompt,
+  inviteText,
   shouldInvite,
   transcript,
   type BrainstormState,
 } from "@/lib/brainstorm";
 import { assistBrainstorm, assistExtract } from "@/lib/ai/assist";
 import type { SourcedCandidate } from "@/lib/ai/types";
-import { VoiceTextarea } from "@/components/VoiceTextarea";
+import { Composer } from "@/components/Composer";
 import { IconBack } from "@/components/icons";
 
 export default function JournalPage() {
@@ -32,9 +33,12 @@ export default function JournalPage() {
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
   const [added, setAdded] = useState<Record<string, string>>({});
-  // 「決めてみますか」を断られたときの発言数。粘らないために覚えておく
-  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  // 「決めにいきますか」を最後に尋ねた時点の発言数。続けて何度も尋ねないために覚えておく
+  const [askedAt, setAskedAt] = useState<number | null>(null);
+  // 「決めにいきますか」を出した直後。会話の末尾に選択肢を添える
+  const [inviting, setInviting] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const saidCount = state.turns.filter((t) => t.from === "USER").length;
   const savedRef = useRef<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +77,7 @@ export default function JournalPage() {
     const text = said.trim();
     if (!text || thinking) return;
     setDraft("");
+    setInviting(false);
     const withUser = addUserTurn(state.turns.length === 0 ? emptyBrainstorm() : state, text);
     setState(withUser);
     setThinking(true);
@@ -82,13 +87,23 @@ export default function JournalPage() {
       if (savedRef.current) store.updateJournalEntry(savedRef.current, body);
       else savedRef.current = store.addJournalEntry(body).id;
 
-      // 会話はAIが進める。ルールはAIが使えないときの代役と、候補の抽出だけ
-      const fallback = fallbackPrompt(withUser);
-      const [reply, candidates] = await Promise.all([
-        assistBrainstorm(withUser, fallback, text),
-        assistExtract(body),
-      ]);
+      const candidates = await assistExtract(body);
       setExtra(candidates);
+
+      // 話が落ち着いたら、会話の中で決めにいくかを尋ねる。
+      // ここで問いを返さないと会話が終わり、本人はそのまま離れてしまう
+      const list = candidates.length > 0 ? candidates : withUser.candidates;
+      if (list.length > 0 && shouldInvite(withUser, askedAt)) {
+        setState((s) => addAppTurn(s, inviteText(list)));
+        // 尋ねたことを覚える。返事がどうであれ、続けて何度も聞かない
+        setAskedAt(withUser.turns.filter((t) => t.from === "USER").length);
+        setInviting(true);
+        return;
+      }
+
+      // それ以外はAIが会話を進める。ルールはAIが使えないときの代役
+      const fallback = fallbackPrompt(withUser);
+      const reply = await assistBrainstorm(withUser, fallback, text);
       // 代役の問いを実際に出したときだけ、既出として記録する
       setState((s) => addAppTurn(s, reply, reply === fallback.text ? fallback.key : undefined));
     } finally {
@@ -103,7 +118,6 @@ export default function JournalPage() {
 
   // ルールとAIの両方から集めた候補(重複はassist側で除いてある)
   const candidates = extra.length > 0 ? extra : state.candidates.map((c) => ({ ...c, source: "RULE" as const }));
-  const saidCount = state.turns.filter((t) => t.from === "USER").length;
   const questions = candidates.filter((c) => c.kind === "QUESTION");
   const signals = candidates.filter((c) => c.kind === "SIGNAL");
 
@@ -124,46 +138,39 @@ export default function JournalPage() {
           )
         )}
         {thinking && <div className="bubble q note">…</div>}
-      </div>
-
-      <VoiceTextarea
-        rows={3}
-        value={draft}
-        onChange={setDraft}
-        placeholder="思いつくまま。まとまっていなくて大丈夫です"
-      />
-      <button
-        className="btn primary"
-        style={{ marginTop: 8 }}
-        onClick={() => void send(draft)}
-        disabled={!draft.trim() || thinking}
-      >
-        {thinking ? "聞いています…" : "話す"}
-      </button>
-      <div ref={endRef} />
-
-      {shouldInvite(state, dismissedAt) && (
-        <div className="invite">
-          <div className="it">決めていないことが{candidates.length}つ出てきました。</div>
-          <div className="id">
-            ひとつ選ぶと、決めるための診断に進めます。まだ話し足りなければ、そのまま続けても大丈夫です。
-          </div>
-          <div className="row2" style={{ marginTop: 12 }}>
+        {inviting && !thinking && (
+          <div className="invite-actions">
             <button
-              className="btn primary half"
+              className="btn primary"
               onClick={() => {
-                setDismissedAt(saidCount);
+                setInviting(false);
                 listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             >
-              決めるものを選ぶ
+              決めにいく
             </button>
-            <button className="btn half" onClick={() => setDismissedAt(saidCount)}>
-              もう少し話す
+            <button
+              className="btn"
+              onClick={() => {
+                setInviting(false);
+                setAskedAt(saidCount);
+              }}
+            >
+              まだ話す
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <Composer
+        value={draft}
+        onChange={setDraft}
+        onSend={() => void send(draft)}
+        sending={thinking}
+        sendLabel="話す"
+        placeholder="思いつくまま。まとまっていなくて大丈夫です"
+      />
+      <div ref={endRef} />
 
       {candidates.length > 0 && (
         <div className="sheet" ref={listRef} style={{ marginTop: 16 }}>

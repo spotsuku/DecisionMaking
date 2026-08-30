@@ -32,6 +32,9 @@ export function appendSpeech(current: string, spoken: string): string {
 export function useSpeechInput(onSpoken: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
+  // 話している最中の途中経過。確定前でも文字が出ないと、
+  // 拾えているのか分からないまま喋り続けることになる
+  const [interim, setInterim] = useState("");
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const onSpokenRef = useRef(onSpoken);
   onSpokenRef.current = onSpoken;
@@ -45,6 +48,7 @@ export function useSpeechInput(onSpoken: (text: string) => void) {
   const toggle = () => {
     if (listening) {
       recRef.current?.stop();
+      setInterim("");
       setListening(false);
       return;
     }
@@ -56,16 +60,28 @@ export function useSpeechInput(onSpoken: (text: string) => void) {
     const rec = new SR();
     rec.lang = "ja-JP";
     rec.continuous = true;
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.onresult = (e) => {
       let spoken = "";
+      let partial = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) spoken += e.results[i][0].transcript;
+        else partial += e.results[i][0].transcript;
       }
-      if (spoken) onSpokenRef.current(spoken);
+      setInterim(partial);
+      if (spoken) {
+        setInterim("");
+        onSpokenRef.current(spoken);
+      }
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      setInterim("");
+      setListening(false);
+    };
+    rec.onerror = () => {
+      setInterim("");
+      setListening(false);
+    };
     recRef.current = rec;
     rec.start();
     setListening(true);
@@ -73,8 +89,9 @@ export function useSpeechInput(onSpoken: (text: string) => void) {
 
   const stop = () => {
     recRef.current?.stop();
+    setInterim("");
     setListening(false);
   };
 
-  return { listening, supported, toggle, stop };
+  return { listening, supported, toggle, stop, interim };
 }

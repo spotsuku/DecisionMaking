@@ -29,13 +29,14 @@ export function Composer({
 }) {
   const valueRef = useRef(value);
   valueRef.current = value;
-  const { listening, supported, toggle } = useSpeechInput((spoken) =>
+  const { listening, supported, toggle, interim } = useSpeechInput((spoken) =>
     onChange(appendSpeech(valueRef.current, spoken))
   );
   const canSend = value.trim() !== "" && !disabled && !sending;
 
   return (
-    <div className="composer">
+    <div className={`composer ${listening ? "listening" : ""}`}>
+      <div className="c-field">
       <textarea
         rows={1}
         value={value}
@@ -48,6 +49,14 @@ export function Composer({
           el.style.height = `${Math.min(el.scrollHeight, 148)}px`;
         }}
       />
+      {listening && (
+        // 聞こえている内容をその場で出す。無反応だと拾えているか分からない
+        <div className="c-hearing">
+          <span className="dot" aria-hidden="true" />
+          {interim ? <span className="t">{interim}</span> : <span className="t idle">聞いています…</span>}
+        </div>
+      )}
+      </div>
       {supported && (
         <button
           type="button"

@@ -153,6 +153,22 @@ export function readyToDecide(state: BrainstormState): boolean {
   return state.candidates.length > 0 && userTurns(state) >= 2;
 }
 
+/**
+ * 決めにいくかを、会話の中で尋ねる文。
+ *
+ * 以前は会話の外のカードに置いていたが、会話がそこで終わってしまい、
+ * 本人はそのまま離脱していた。話が落ち着いたら、聞き役自身が
+ * 「これを決めにいきますか」と手渡す。決めるかどうかは本人が選ぶ(INV-05)。
+ */
+export function inviteText(candidates: Candidate[]): string {
+  const head = candidates[0]?.text ?? "";
+  const short = head.length <= 28 ? head : `${head.slice(0, 27)}…`;
+  if (candidates.length === 1) {
+    return `ここまでで、決めていないことが1つ見えました。「${short}」。これを決めにいきますか?`;
+  }
+  return `ここまでで、決めていないことが${candidates.length}つ見えました。どれか1つ、決めにいきますか?`;
+}
+
 /** 直前の発言 */
 function lastSaid(state: BrainstormState): string {
   return [...state.turns].reverse().find((t) => t.from === "USER")?.text ?? "";

@@ -539,3 +539,23 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
   border-top: 1px solid var(--line);
 }
 .disclosure .mark { color: var(--ink-faint); font-size: 11px; }
+
+/* 話している最中の表示。無反応だと拾えているか分からない */
+.composer .c-field { flex: 1; min-width: 0; }
+.composer.listening { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.c-hearing {
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 0 0 7px; font-size: 13px; line-height: 1.6; color: var(--ink-soft);
+}
+.voice-field .c-hearing { padding: 8px 12px 10px; }
+.c-hearing .dot {
+  flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); animation: hearing 1.1s ease-in-out infinite;
+}
+.c-hearing .t { flex: 1; }
+.c-hearing .t.idle { color: var(--ink-faint); }
+@keyframes hearing { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+
+/* 会話の末尾に添える選択肢。吹き出しの続きとして左に寄せる */
+.invite-actions { display: flex; gap: 8px; margin-top: 2px; }
+.invite-actions .btn { flex: 1; min-height: 46px; margin-top: 0; }

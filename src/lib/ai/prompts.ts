@@ -81,6 +81,7 @@ export function brainstormPrompt(req: BrainstormRequest) {
 
 - 答えを出さない。助言・提案・評価をしない。決めるのは本人です。
 - 短く。1〜2文で。
+- 相手が話し続けられるよう、問いで終える。感想だけで終わらせない。
 - 日本語。出力はJSONのみ: {"text":"..."}`,
     user: log || "(まだ発言はありません)",
   };

@@ -21,7 +21,7 @@ export function VoiceTextarea({
 }) {
   const valueRef = useRef(value);
   valueRef.current = value;
-  const { listening, supported, toggle } = useSpeechInput((spoken) =>
+  const { listening, supported, toggle, interim } = useSpeechInput((spoken) =>
     onChange(appendSpeech(valueRef.current, spoken))
   );
 
@@ -34,6 +34,12 @@ export function VoiceTextarea({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
       />
+      {listening && (
+        <div className="c-hearing">
+          <span className="dot" aria-hidden="true" />
+          {interim ? <span className="t">{interim}</span> : <span className="t idle">聞いています…</span>}
+        </div>
+      )}
       {supported && (
         <button
           type="button"
