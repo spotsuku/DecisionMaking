@@ -1,6 +1,9 @@
 // 規約類の共通情報。事業者情報は本番公開前に必ず実在の内容へ差し替える。
 // ここが空のままだと特定商取引法の表示義務を満たさない。
 
+/** AIの提供元。切り替えたらここと .env を合わせる */
+export const AI_VENDOR = "OpenAI";
+
 export const LEGAL = {
   serviceName: "DECISION MAKING",
   /** TODO: 公開前に差し替え */
@@ -15,11 +18,11 @@ export const LEGAL = {
 /** 外部に渡る先。プライバシーポリシーと実装を一致させるためにここで一元管理する */
 export const SUBPROCESSORS = [
   {
-    name: "Anthropic PBC (Claude API)",
+    name: "OpenAI, L.L.C.",
     country: "米国",
     purpose: "書き出し文・診断の回答から候補を作るため",
     data: "本人が入力した本文(書き出し・診断の回答)",
-    note: "APIとして送信した内容は、提供元のモデル学習には利用されません。",
+    note: "APIとして送信した内容は、既定では提供元のモデル学習に利用されません。",
   },
   {
     name: "Supabase Inc.",

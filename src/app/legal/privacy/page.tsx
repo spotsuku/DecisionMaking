@@ -3,7 +3,7 @@
 // 何をどこへ渡すかを曖昧にしない。実装(SUBPROCESSORS)と表示を同じ定数から作る。
 
 import Link from "next/link";
-import { LEGAL, SUBPROCESSORS } from "@/lib/legal";
+import { AI_VENDOR, LEGAL, SUBPROCESSORS } from "@/lib/legal";
 
 export const metadata = { title: "プライバシーポリシー | DECISION MAKING" };
 
@@ -41,12 +41,12 @@ export default function PrivacyPage() {
       <h2>3. AI機能で外部へ送るもの</h2>
       <p>
         決断候補の提案・チャットの言い換え・回答の欄への振り分けでは、
-        <strong>あなたが入力した本文を Anthropic PBC の Claude API へ送信します</strong>。
+        <strong>あなたが入力した本文を {AI_VENDOR} の API へ送信します</strong>。
         送信するのは、その処理に必要な本文だけです。氏名・メールアドレス・
         他の決断の記録は送りません。
       </p>
       <p>
-        APIとして送信した内容が、提供元のモデルの学習に使われることはありません。
+        APIとして送信した内容は、提供元の既定の設定ではモデルの学習に使われません。
         AI機能を使わずに本サービスを利用することもできます。その場合も、
         ルールベースの提案と診断はそのまま動きます(設定画面から切り替えられます)。
       </p>

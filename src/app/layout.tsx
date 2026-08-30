@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TabBar } from "@/components/TabBar";
+import { CloudSync } from "@/components/CloudSync";
 
 export const metadata: Metadata = {
   title: "DECISION MAKING",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <main className="shell">{children}</main>
         <TabBar />
+        <CloudSync />
       </body>
     </html>
   );

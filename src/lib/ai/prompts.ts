@@ -6,7 +6,7 @@ import type { BrainstormRequest, ExtractRequest, ReplyRequest, SplitRequest } fr
 const COMMON = `あなたは意思決定支援アプリの補助です。次の制約を必ず守ってください。
 - 本人が書いていないことを足さない。推測で内容を補わない。
 - 助言・評価・励ましをしない。決めるのは本人です。
-- 出力は指定のJSONだけ。前後に説明文を書かない。
+- 出力は指定のJSONだけ。前後に説明文を書かない。マークダウンの囲みも付けない。
 - 日本語で答える。`;
 
 export function extractPrompt(req: ExtractRequest) {

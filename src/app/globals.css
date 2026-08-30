@@ -473,3 +473,11 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
   background: var(--ink); color: #fff; font-size: 15px;
   display: flex; align-items: center; justify-content: center;
 }
+
+/* 登録前の注意書き。警告ではないので赤は使わない */
+.local-only {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border-radius: 14px;
+  padding: 11px 14px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.6;
+}
+.local-only .chev { margin-left: auto; color: var(--ink-faint); flex: none; }

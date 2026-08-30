@@ -11,6 +11,7 @@ import { store } from "@/lib/store";
 import { buildObservations } from "@/lib/observations";
 import { useSpeechInput, appendSpeech } from "@/lib/useSpeech";
 import { JOURNAL_SEED_KEY } from "@/lib/journal";
+import { useAuth } from "@/lib/auth";
 import { IconChevron, IconMic, IconPen, IconUser, IconWarn } from "@/components/icons";
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -41,6 +42,9 @@ export default function HomePage() {
   const dateLabel = `${now.getMonth() + 1}月${now.getDate()}日 ${WEEKDAYS[now.getDay()]}曜日`;
 
   const observations = buildObservations(db);
+  const auth = useAuth();
+  // 記録が溜まってきた匿名利用者にだけ、消える可能性を1行で伝える
+  const warnLocalOnly = auth.status === "ANONYMOUS" && db.decisions.length + db.journal.length >= 2;
 
   // 今日の一歩: 未完了のADVANCE行動のうち期限が最も近いもの
   const nextAction = db.actions
@@ -101,6 +105,15 @@ export default function HomePage() {
       <Link href="/decisions/new" style={{ display: "block", marginTop: 10 }}>
         <span className="btn outline">決めることを直接登録する</span>
       </Link>
+
+      {warnLocalOnly && (
+        <Link href="/signup?next=/" style={{ display: "block", marginTop: 10 }}>
+          <span className="local-only">
+            記録はこの端末にだけ入っています。登録すると保存されます
+            <span className="chev"><IconChevron /></span>
+          </span>
+        </Link>
+      )}
 
       {observations.length > 0 && (
         <>

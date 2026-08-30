@@ -666,6 +666,13 @@ class Store {
     return JSON.stringify(this.db, null, 2);
   }
 
+  /** クラウドと合わせた結果で丸ごと差し替える(同期専用) */
+  replaceAll(db: DB) {
+    this.db = db;
+    this.loaded = true;
+    this.persist();
+  }
+
   resetAll() {
     this.db = emptyDB();
     this.loaded = true;

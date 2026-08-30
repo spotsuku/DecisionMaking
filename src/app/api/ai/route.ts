@@ -4,7 +4,7 @@
 // 失敗したらエラーを返し、呼び出し側はルールベースの結果で続行する。
 
 import { NextResponse } from "next/server";
-import { callAnthropic, MODELS } from "@/lib/ai/anthropic";
+import { callModel } from "@/lib/ai/provider";
 import { brainstormPrompt, extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
 import type { AiRequest, BrainstormResult, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
 
@@ -38,22 +38,22 @@ export async function POST(request: Request) {
   try {
     if (body.task === "extract") {
       const { system, user } = extractPrompt(body);
-      const r = await callAnthropic<ExtractResult>({ model: MODELS.cheap, system, user, maxTokens: 800 });
+      const r = await callModel<ExtractResult>({ kind: "cheap", system, user, maxTokens: 800 });
       return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
     }
     if (body.task === "reply") {
       const { system, user } = replyPrompt(body);
-      const r = await callAnthropic<ReplyResult>({ model: MODELS.chat, system, user, maxTokens: 300 });
+      const r = await callModel<ReplyResult>({ kind: "chat", system, user, maxTokens: 300 });
       return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
     }
     if (body.task === "brainstorm") {
       const { system, user } = brainstormPrompt(body);
-      const r = await callAnthropic<BrainstormResult>({ model: MODELS.chat, system, user, maxTokens: 300 });
+      const r = await callModel<BrainstormResult>({ kind: "chat", system, user, maxTokens: 300 });
       return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
     }
     if (body.task === "split") {
       const { system, user } = splitPrompt(body);
-      const r = await callAnthropic<SplitResult>({ model: MODELS.cheap, system, user, maxTokens: 800 });
+      const r = await callModel<SplitResult>({ kind: "cheap", system, user, maxTokens: 800 });
       return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
     }
     return NextResponse.json({ ok: false, result: null, error: "unknown task" }, { status: 400 });

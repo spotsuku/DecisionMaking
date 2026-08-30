@@ -9,6 +9,8 @@ import { store } from "@/lib/store";
 import { computeIntegrity, detectSelectiveAttribution } from "@/lib/drift";
 import { BLOCKER_LABEL } from "@/lib/types";
 import { isAiEnabled, setAiEnabled } from "@/lib/settings";
+import { useAuth, signOut } from "@/lib/auth";
+import { AI_VENDOR } from "@/lib/legal";
 import { IconChevron } from "@/components/icons";
 
 const METRIC_LABEL: Record<string, string> = {
@@ -24,6 +26,7 @@ export default function IdentityPage() {
   // localStorage はサーバー描画では読めないので、描画後に反映する
   const [aiOn, setAiOn] = useState(true);
   useEffect(() => setAiOn(isAiEnabled()), []);
+  const auth = useAuth();
 
   const db = useDB();
   const integrity = computeIntegrity(db);
@@ -112,6 +115,32 @@ export default function IdentityPage() {
         </>
       )}
 
+      <div className="section">アカウント</div>
+      {auth.status === "SIGNED_IN" ? (
+        <div className="card">
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{auth.account.email ?? "ログイン中"}</div>
+          <div className="card-meta" style={{ marginTop: 4 }}>
+            記録はアカウントに保存され、他の端末からも見られます。
+          </div>
+          <button className="btn ghost" style={{ marginTop: 8, minHeight: 40 }} onClick={() => void signOut()}>
+            ログアウト
+          </button>
+        </div>
+      ) : auth.status === "ANONYMOUS" ? (
+        <div className="card">
+          <div style={{ fontSize: 14, fontWeight: 700 }}>登録なしで使っています</div>
+          <div className="card-meta" style={{ marginTop: 4, lineHeight: 1.8 }}>
+            記録はこの端末にだけ入っています。ブラウザのデータを消すと消え、
+            他の端末からは見られません。
+          </div>
+          <Link href="/signup?next=/identity">
+            <button className="btn primary" style={{ marginTop: 10, minHeight: 42 }}>
+              登録して記録を保存する
+            </button>
+          </Link>
+        </div>
+      ) : null}
+
       <div className="section">設定</div>
       <label className="check-row">
         <input
@@ -126,7 +155,7 @@ export default function IdentityPage() {
           AIの提案を使う
           <br />
           <span className="card-meta">
-            書き出しと診断の本文が Claude API へ送られます。切っても、ルールベースの提案と
+            書き出しと診断の本文が {AI_VENDOR} の API へ送られます。切っても、ルールベースの提案と
             診断はそのまま使えます。
           </span>
         </span>
@@ -148,7 +177,8 @@ export default function IdentityPage() {
       </div>
 
       <div className="footer-note">
-        決断履歴は削除・上書きできません(履歴の不変性)。データはこの端末に保存されます。
+        決断履歴は削除・上書きできません(履歴の不変性)。
+        {auth.status === "SIGNED_IN" ? "データはアカウントに保存されます。" : "データはこの端末に保存されます。"}
         <button
           className="btn ghost"
           style={{ marginTop: 6, minHeight: 40 }}

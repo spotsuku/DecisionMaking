@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDecision } from "@/lib/useDecision";
 import { store } from "@/lib/store";
+import { useAuth, needsAccount } from "@/lib/auth";
 import { evaluateCommitGate } from "@/lib/stateMachine";
 import { IconBack } from "@/components/icons";
 
@@ -23,6 +24,8 @@ function plusDays(days: number): string {
 export default function CommitWizardPage() {
   const router = useRouter();
   const { db, decision, version } = useDecision();
+  const auth = useAuth();
+  const [askAccount, setAskAccount] = useState(false);
   const [step, setStep] = useState(0);
 
   const options = version ? db.options.filter((o) => o.versionId === version.id && o.active) : [];
@@ -133,6 +136,9 @@ export default function CommitWizardPage() {
     if (mitigateText.trim()) {
       actions.push({ text: mitigateText.trim(), actionRole: "MITIGATE", dueAt: isoFromLocal(reviewAt), optionId: selectedOptionId || null });
     }
+    // 結果を残す段でだけアカウントを求める(ここまでは登録なしで進める)
+    if (needsAccount(auth)) return setAskAccount(true);
+
     const result = store.commit(decision.id, {
       selectedOptionId,
       rationale,
@@ -328,8 +334,23 @@ export default function CommitWizardPage() {
               ))}
             </div>
           )}
+          {askAccount && (
+            <div className="callout">
+              <strong>結果を保存するにはアカウントが必要です</strong>
+              <div style={{ marginTop: 6, lineHeight: 1.9 }}>
+                ここまでの入力はこの端末に残っています。登録するとそのまま保存され、
+                他の端末からも見られるようになります。
+              </div>
+              <div className="row2" style={{ marginTop: 10 }}>
+                <Link href={`/signup?next=${encodeURIComponent(`/decisions/${decision.id}/commit`)}`} style={{ display: "block" }}>
+                  <button className="btn primary half">登録して保存する</button>
+                </Link>
+                <button className="btn half" onClick={() => setAskAccount(false)}>あとにする</button>
+              </div>
+            </div>
+          )}
           <button className="btn primary" style={{ minHeight: 54 }} disabled={!gatePreview.ok} onClick={doCommit}>
-            決断を確定する
+            {needsAccount(auth) ? "登録して決断を確定する" : "決断を確定する"}
           </button>
         </>
       )}
