@@ -27,6 +27,13 @@ describe("音声入力の細切れを1つの問いに復元する", () => {
     expect(texts("会社を辞めるかどうか")).toContain("会社を辞めるかどうか");
   });
 
+  it("連体詞の「あの」「その」は消さない(フィラーとの誤判定を防ぐ)", () => {
+    expect(texts("あの返信、3日放置してる")).toContain("あの返信、3日放置してる");
+    expect(texts("その案件を続けるかどうか")).toContain("その案件を続けるかどうか");
+    // 読点・空白が続くときだけ言いよどみとして落とす
+    expect(texts("なんか、ずっと決められない")).toContain("ずっと決められない");
+  });
+
   it("問いの形はQUESTION、停滞の兆候はSIGNALに分ける", () => {
     expect(kindOf(shiba, "買うかどうか")).toBe("QUESTION");
     expect(kindOf(shiba, "検討しています")).toBe("SIGNAL");

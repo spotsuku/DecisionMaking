@@ -123,13 +123,19 @@ export function readinessDisplay(db: DB, decisionId: string): ReadinessDisplay {
     return "ACT";
   }
   if (!frameComplete(version, decision.dueAt)) return "FRAME";
+
+  // 「決められる」は、比較する材料と判断可能性がそろってから(4.8)。
+  // 問いを立てただけの状態で確定へ誘導すると、Commit gateで弾かれる行き止まりになる。
   const latestReadiness = db.readiness
     .filter((r) => r.versionId === version.id)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .at(-1);
-  if (latestReadiness && latestReadiness.verdict !== "THINK" && latestReadiness.verdict !== "BET") {
-    return "GATHER";
-  }
+  if (!latestReadiness) return "GATHER";
+  if (latestReadiness.verdict !== "THINK" && latestReadiness.verdict !== "BET") return "GATHER";
+
+  const activeOptions = db.options.filter((o) => o.versionId === version.id && o.active).length;
+  if (activeOptions < 2) return "GATHER";
+
   return "DECIDABLE";
 }
 

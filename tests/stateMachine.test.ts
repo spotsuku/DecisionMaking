@@ -1,7 +1,8 @@
 // 状態遷移と決断成立ルールのテスト(設計書 2.3 / 4.6 / 10.3)
 
 import { describe, it, expect } from "vitest";
-import { canTransition, evaluateCommitGate, type CommitInput } from "../src/lib/stateMachine";
+import { canTransition, evaluateCommitGate, readinessDisplay, type CommitInput } from "../src/lib/stateMachine";
+import { emptyDB } from "../src/lib/types";
 
 describe("状態機械(2.3)", () => {
   it("正常フロー DRAFT→DIAGNOSING→READY→COMMITTED→IN_ACTION→REVIEW→CLOSED を許可する", () => {
@@ -135,5 +136,56 @@ describe("決断成立ルール(4.6 / INV-02)", () => {
     const r = evaluateCommitGate(input);
     expect(r.ok).toBe(false);
     expect(r.failures.map((f) => f.code)).toContain("TRADEOFF");
+  });
+});
+
+describe("準備度の4段階表示(4.8)", () => {
+  const iso = (d: string) => new Date(d).toISOString();
+
+  function fixture(o: { dueAt?: string | null; readiness?: "THINK" | "RESEARCH"; options?: number } = {}) {
+    const db = emptyDB();
+    db.decisions.push({
+      id: "d1", title: "t", domain: "WORK", status: "DIAGNOSING", currentVersionNo: 1,
+      dueAt: o.dueAt === undefined ? iso("2026-12-01") : o.dueAt, reviewAt: null,
+      riskLevel: "NORMAL", createdAt: iso("2026-08-01"), closedAt: null, hidden: false,
+    });
+    db.versions.push({
+      id: "v1", decisionId: "d1", versionNo: 1, question: "AかBか", ownerRole: "自分",
+      authorityScope: "", selectedOptionId: null, rationale: "", confidence: null,
+      state: "DIAGNOSING", committedAt: null, createdAt: iso("2026-08-01"),
+    });
+    if (o.readiness) {
+      db.readiness.push({
+        id: "r1", versionId: "v1", verdict: o.readiness, missing: [],
+        stopCondition: null, note: "", createdAt: iso("2026-08-02"),
+      });
+    }
+    for (let i = 0; i < (o.options ?? 0); i++) {
+      db.options.push({
+        id: `o${i}`, versionId: "v1", label: `案${i}`, description: "", origin: "USER",
+        active: true, addedReason: "", rejectedReason: null, createdAt: iso("2026-08-02"),
+      });
+    }
+    return db;
+  }
+
+  it("問い・主体・期限が欠けていれば FRAME", () => {
+    expect(readinessDisplay(fixture({ dueAt: null }), "d1")).toBe("FRAME");
+  });
+
+  it("問いを立てただけでは DECIDABLE にしない(判断可能性が未判定)", () => {
+    expect(readinessDisplay(fixture(), "d1")).toBe("GATHER");
+  });
+
+  it("調査・相談・実験が必要なら GATHER", () => {
+    expect(readinessDisplay(fixture({ readiness: "RESEARCH", options: 2 }), "d1")).toBe("GATHER");
+  });
+
+  it("THINKでも比較する選択肢が2件未満なら GATHER", () => {
+    expect(readinessDisplay(fixture({ readiness: "THINK", options: 1 }), "d1")).toBe("GATHER");
+  });
+
+  it("判断可能性と選択肢2件がそろって DECIDABLE", () => {
+    expect(readinessDisplay(fixture({ readiness: "THINK", options: 2 }), "d1")).toBe("DECIDABLE");
   });
 });

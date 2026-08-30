@@ -35,7 +35,16 @@ export type BlockerCode =
   | "SELF_JUSTIFICATION"
   | "APPROVAL_SEEKING";
 
-export type DomainCode = "WORK" | "CAREER" | "MONEY" | "RELATIONSHIP" | "HEALTH" | "LEGAL" | "OTHER";
+export type DomainCode =
+  | "WORK"
+  | "CAREER"
+  | "MONEY"
+  | "RELATIONSHIP"
+  | "ROMANCE"
+  | "FAMILY"
+  | "HEALTH"
+  | "LEGAL"
+  | "OTHER";
 
 export type RiskLevel = "NORMAL" | "HIGH" | "EMERGENCY";
 
@@ -300,6 +309,8 @@ export const DOMAIN_LABEL: Record<DomainCode, string> = {
   CAREER: "キャリア",
   MONEY: "お金・投資",
   RELATIONSHIP: "人間関係",
+  ROMANCE: "恋愛",
+  FAMILY: "家庭",
   HEALTH: "健康",
   LEGAL: "法律・契約",
   OTHER: "その他",

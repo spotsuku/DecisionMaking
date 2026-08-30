@@ -106,7 +106,14 @@ export default function JournalPage() {
       <textarea
         className="dump-area"
         autoFocus
-        placeholder={"思いつくまま、そのまま書いてください。\n順番も整理も、いりません。"}
+        placeholder={
+          "例)\n" +
+          "転職しようか迷ってる。不満はないけど…\n" +
+          "犬を飼うかどうか。世話は誰がする?\n" +
+          "週末の予定、まだ決めてない\n" +
+          "あの返信、3日放置してる\n\n" +
+          "うまく書かなくて大丈夫。"
+        }
         value={text}
         onChange={(e) => setText(e.target.value)}
       />

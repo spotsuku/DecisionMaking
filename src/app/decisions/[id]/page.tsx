@@ -39,8 +39,22 @@ export default function DecisionHubPage() {
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
   const nextAction = pendingActions[0];
 
-  const primaryTarget =
-    disp === "DECIDABLE" ? `/decisions/${decision.id}/commit` : `/decisions/${decision.id}/diagnose`;
+  // 段階ラベルだけでは何をすればよいか分からないので、次の一歩を具体的に示す。
+  // 材料がそろう前に確定へ誘導すると、Commit gateで弾かれる行き止まりになる。
+  const nextStep = (() => {
+    const base = `/decisions/${decision.id}`;
+    if (disp === "FRAME") return { label: "問いと期限を決める", href: `${base}/diagnose` };
+    if (disp === "DECIDABLE") return { label: "決断を確定する", href: `${base}/commit` };
+    const readiness = db.readiness
+      .filter((r) => r.versionId === version.id)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .at(-1);
+    if (!readiness) return { label: "診断を始める", href: `${base}/diagnose` };
+    if (readiness.verdict !== "THINK" && readiness.verdict !== "BET") {
+      return { label: "次に確かめる", href: `${base}/materials` };
+    }
+    return { label: "選択肢を整理する", href: `${base}/materials` };
+  })();
 
   const menu: { label: string; href: string; show: boolean }[] = [
     { label: "診断の記録", href: `/decisions/${decision.id}/diagnose`, show: true },
@@ -127,8 +141,8 @@ export default function DecisionHubPage() {
         </div>
       ) : (
         decision.status !== "CLOSED" && (
-          <Link href={primaryTarget}>
-            <button className="btn primary" style={{ marginTop: 12 }}>{cta.cta}</button>
+          <Link href={nextStep.href}>
+            <button className="btn primary" style={{ marginTop: 12 }}>{nextStep.label}</button>
           </Link>
         )
       )}
