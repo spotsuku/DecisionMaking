@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { activeProvider, callModel, modelFor } from "@/lib/ai/provider";
+import { rateLimit, sameOrigin } from "@/lib/ai/guard";
 import { brainstormPrompt, extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
 import type { AiRequest, BrainstormResult, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
 
@@ -15,20 +16,63 @@ export const maxDuration = 20;
  * 設定の確認用。鍵そのものは返さず、「どの提供元が有効か」だけを返す。
  * デプロイ後に環境変数が効いているかを、鍵を触らずに確かめられる。
  */
-export function GET() {
+export async function GET(request: Request) {
   const provider = activeProvider();
-  return NextResponse.json({
+  const config = {
     provider,
     models: provider ? { chat: modelFor("chat"), cheap: modelFor("cheap") } : null,
     // 提供元が無くても、ルールベースで全機能が動く
     fallback: provider === null ? "rule-based" : null,
-  });
+  };
+
+  // ?probe=1 で実際に1回呼ぶ。設定だけ合っていて実は返ってこない、を見分ける。
+  // 課金が発生するので回数制限をかける
+  if (new URL(request.url).searchParams.get("probe") !== "1") {
+    return NextResponse.json(config);
+  }
+  if (!provider) return NextResponse.json({ ...config, probe: { ok: false, error: "APIキーが未設定です" } });
+  const limit = rateLimit(request);
+  if (!limit.ok) {
+    return NextResponse.json({ ...config, probe: { ok: false, error: "rate_limited" } }, { status: 429 });
+  }
+
+  const started = Date.now();
+  try {
+    const r = await callModel<{ ok: boolean }>({
+      kind: "cheap",
+      system: 'JSONで {"ok":true} とだけ返してください。',
+      user: "ping",
+      maxTokens: 16,
+    });
+    return NextResponse.json({
+      ...config,
+      probe: { ok: true, model: r.model, ms: Date.now() - started, usage: r.usage },
+    });
+  } catch (e) {
+    // 原因が分からないと直せないので、ここだけはメッセージを返す。鍵は含まれない
+    return NextResponse.json({
+      ...config,
+      probe: { ok: false, ms: Date.now() - started, error: e instanceof Error ? e.message : String(e) },
+    });
+  }
 }
 
 /** 1回の投稿に載せられる本文の長さ。原価と滞留時間の上限 */
 const MAX_INPUT_CHARS = 4000;
 
 export async function POST(request: Request) {
+  // 有料の鍵がぶら下がっているので、素通しにしない
+  if (!sameOrigin(request)) {
+    return NextResponse.json({ ok: false, result: null, error: "forbidden" }, { status: 403 });
+  }
+  const limit = rateLimit(request);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { ok: false, result: null, error: "rate_limited" },
+      { status: 429, headers: { "retry-after": String(limit.retryAfter) } }
+    );
+  }
+
   let body: AiRequest;
   try {
     body = (await request.json()) as AiRequest;

@@ -27,9 +27,11 @@ async function post<T>(body: AiRequest): Promise<T | null> {
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-    const env = (await res.json()) as AiEnvelope<T>;
-    // 設定漏れなど、繰り返しても直らない失敗はその場で諦める
+    // 混みすぎ(429)は一時的なので、次の発言では普通に呼ぶ。
+    // 設定漏れ(502)だけは繰り返しても直らないので、その画面では以降呼ばない
     if (res.status === 502) aiDisabled = true;
+    if (res.status === 429 || res.status === 403) return null;
+    const env = (await res.json()) as AiEnvelope<T>;
     return env.ok ? env.result : null;
   } catch {
     return null;
