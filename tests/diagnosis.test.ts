@@ -8,6 +8,9 @@ import {
   detectGatheringEscape,
   detectOptionExpansion,
   selectNextQuestion,
+  splitFreeText,
+  joinParts,
+  assessGaps,
 } from "../src/lib/diagnosis";
 import { emptyDB, type DB, type DecisionVersion, type EvidenceItem } from "../src/lib/types";
 
@@ -151,5 +154,67 @@ describe("質問の記入欄(データとして分ける)", () => {
       expect(new Set(q.parts.map((p) => p.key)).size).toBe(q.parts.length);
       expect(q.parts[0].optional).not.toBe(true); // 先頭欄は必須
     }
+  });
+});
+
+describe("チャットの自由文を記入欄へ振り分ける", () => {
+  const q = (code: string) => QUESTION_BANK.find((x) => x.code === code)!;
+
+  it("受入テスト: 守るものと諦めるものが一続きで語られても、別の欄に入る", () => {
+    const r = splitFreeText(
+      q("Q_CRITERIA"),
+      "家で妻が育ててくれることが重要。僕が朝エサをあげたりできますが、洗濯や散歩などはできない。" +
+        "諦めて良いのはお金は払う。朝と夜はしっかりと世話する。"
+    );
+    expect(r.protect).toContain("重要");
+    expect(r.giveup).toContain("諦めて良いのはお金は払う");
+    expect(r.protect).not.toContain("諦めて良い");
+  });
+
+  it("手掛かりに当たらない文は、直前の文と同じ欄に続けて入れる", () => {
+    const r = splitFreeText(q("Q_CRITERIA"), "守りたいのは家族との時間。夜は家にいたい。");
+    expect(r.protect).toBe("守りたいのは家族との時間。夜は家にいたい。");
+    expect(r.giveup).toBeUndefined();
+  });
+
+  it("記入欄が1つの質問は、全文をそのまま入れる", () => {
+    const r = splitFreeText(q("Q_FRAME_SENTENCE"), "犬を迎えるかどうか。まだ決めきれない。");
+    expect(r.question).toBe("犬を迎えるかどうか。まだ決めきれない。");
+  });
+
+  it("本人の言葉を要約も追記もしない(全文が復元できる)", () => {
+    const text = "分からないのは世話の時間。見学2件まで調べたら、それ以上は調べない。";
+    const r = splitFreeText(q("Q_INFO_STOP"), text);
+    expect(Object.values(r).join("")).toBe(text);
+  });
+
+  it("空文字は欄を作らない", () => {
+    expect(splitFreeText(q("Q_CRITERIA"), "   ")).toEqual({});
+  });
+
+  it("joinParts は欄が複数のときだけラベルを付ける", () => {
+    expect(joinParts(q("Q_CRITERIA"), { protect: "家族の時間", giveup: "年収" }))
+      .toBe("守りたいもの: 家族の時間\n諦めてもいいもの: 年収");
+    expect(joinParts(q("Q_FRAME_SENTENCE"), { question: "犬を迎えるか" })).toBe("犬を迎えるか");
+  });
+});
+
+describe("スキップした回答(わからないで飛ばす)", () => {
+  it("スキップは記録に残るが、成立条件を埋めたとは数えない", () => {
+    const db: DB = emptyDB();
+    const v = makeVersion({ question: "犬を迎えるか", ownerRole: "自分" });
+    db.versions.push(v);
+    db.questions.push({
+      id: "q1", versionId: v.id, questionCode: "Q_ACTION_24H",
+      text: "", purpose: "", gap: "EXECUTION", sequenceNo: 1,
+    });
+    db.answers.push({
+      id: "a1", questionId: "q1", versionId: v.id, questionCode: "Q_ACTION_24H",
+      answerText: "", answerJson: {}, skipped: true, submittedAt: new Date().toISOString(),
+    });
+    const execution = assessGaps(db, v, new Date().toISOString()).find((g) => g.gap === "EXECUTION")!;
+    expect(execution.missing).toBe(true);
+    // 同じ質問は繰り返さない
+    expect(selectNextQuestion(db, v, new Date().toISOString())?.code).not.toBe("Q_ACTION_24H");
   });
 });

@@ -3,13 +3,15 @@
 // 診断(一問一画面): 進捗を明示し、1問ずつ答える。
 // 第1層(成立条件)チップ・第2層(心理作用)・判断可能性ルーターもこの画面に。
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDecision } from "@/lib/useDecision";
 import { store } from "@/lib/store";
 import {
   QUESTION_BANK,
+  splitFreeText,
+  joinParts,
   selectNextQuestion,
   assessGaps,
   assessBlockers,
@@ -17,18 +19,40 @@ import {
   classifySafety,
   ALGORITHM_VERSION,
 } from "@/lib/diagnosis";
-import { BLOCKER_LABEL, GAP_LABEL, READINESS_LABEL, type Readiness } from "@/lib/types";
+import { BLOCKER_LABEL, GAP_LABEL, READINESS_LABEL, type AnswerMode, type Readiness } from "@/lib/types";
 import { FramePanel } from "@/components/FramePanel";
 import { VoiceTextarea } from "@/components/VoiceTextarea";
 import { IconBack } from "@/components/icons";
 
 const MAX_QUESTIONS = 7;
+const MODE_KEY = "dm.diagnose.mode";
+
+function stripEmpty(values: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(values).filter(([, v]) => v.trim() !== ""));
+}
 
 export default function DiagnosePage() {
   const router = useRouter();
   const { db, decision, version } = useDecision();
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [chatDraft, setChatDraft] = useState("");
+  const [mode, setMode] = useState<AnswerMode>("CHAT");
   const [showLog, setShowLog] = useState(false);
+
+  // 聞かれ方の好みは人によって違うので、端末に覚えさせる
+  useEffect(() => {
+    const saved = window.localStorage.getItem(MODE_KEY);
+    if (saved === "CHAT" || saved === "FORM") setMode(saved);
+  }, []);
+  const changeMode = (next: AnswerMode) => {
+    // チャットで書きかけの文があれば、欄へ振り分けて引き継ぐ
+    if (next === "FORM" && current && chatDraft.trim()) {
+      setDraft((d) => ({ ...splitFreeText(current, chatDraft), ...stripEmpty(d) }));
+      setChatDraft("");
+    }
+    setMode(next);
+    window.localStorage.setItem(MODE_KEY, next);
+  };
 
   const [routing, setRouting] = useState(false);
   const [factsMissing, setFactsMissing] = useState(false);
@@ -70,33 +94,52 @@ export default function DiagnosePage() {
     .at(-1);
   const safety = classifySafety(decision.domain, answers.map((a) => a.answerText).join(" "));
 
-  const filled = current
-    ? current.parts.filter((part) => (draft[part.key] ?? "").trim() !== "")
-    : [];
   // 先頭の欄が埋まっていれば次へ進める(任意欄で足止めしない)
   const canSubmit = !!current && (draft[current.parts[0].key] ?? "").trim() !== "";
 
-  const submitAnswer = () => {
-    if (!current || !canSubmit) return;
-    const q =
-      pendingQuestion ??
-      store.recordQuestion(version.id, {
-        code: current.code,
-        text: current.text,
-        purpose: current.purpose,
-        gap: current.gap,
-      });
-    const answerJson: Record<string, string> = {};
-    for (const part of current.parts) {
-      const value = (draft[part.key] ?? "").trim();
-      if (value) answerJson[part.key] = value;
-    }
-    const answerText =
-      current.parts.length > 1
-        ? filled.map((part) => `${part.label}: ${(draft[part.key] ?? "").trim()}`).join("\n")
-        : (draft[current.parts[0].key] ?? "").trim();
-    store.recordAnswer(q.id, answerText, answerJson);
+  /** 質問レコードは、答えるかスキップするその時に作る */
+  const ensureQuestion = () =>
+    pendingQuestion ??
+    store.recordQuestion(version.id, {
+      code: current!.code,
+      text: current!.text,
+      purpose: current!.purpose,
+      gap: current!.gap,
+    });
+
+  const saveAnswer = (values: Record<string, string>, answered: AnswerMode) => {
+    if (!current) return;
+    const answerJson = stripEmpty(values);
+    store.recordAnswer(ensureQuestion().id, joinParts(current, answerJson), answerJson, {
+      mode: answered,
+    });
     setDraft({});
+    setChatDraft("");
+    refreshBlockers();
+  };
+
+  const submitAnswer = () => {
+    if (!canSubmit) return;
+    saveAnswer(draft, "FORM");
+  };
+
+  /** チャットの一続きの答えを、欄へ振り分けて保存する */
+  const submitChat = () => {
+    if (!current || !chatDraft.trim()) return;
+    saveAnswer(splitFreeText(current, chatDraft), "CHAT");
+  };
+
+  /** わからない質問は飛ばす。記録は残し、成立条件は埋まっていないままにする */
+  const skipQuestion = () => {
+    if (!current) return;
+    store.recordAnswer(ensureQuestion().id, "", {}, { skipped: true, mode });
+    setDraft({});
+    setChatDraft("");
+    refreshBlockers();
+  };
+
+  function refreshBlockers() {
+    if (!version) return;
     const fresh = store.getSnapshot();
     const signals = assessBlockers(fresh, version);
     store.saveBlockers(
@@ -110,7 +153,7 @@ export default function DiagnosePage() {
         algorithmVersion: ALGORITHM_VERSION,
       }))
     );
-  };
+  }
 
   const runRouter = () => {
     const verdict: Readiness = routeReadiness({ factsMissing, needsAsk, testable, unknowable });
@@ -147,34 +190,119 @@ export default function DiagnosePage() {
         <div className="callout neutral">このversionは確定済みです。診断の記録は変更できません。</div>
       ) : current ? (
         <>
-          <div className="chips" style={{ marginTop: 8 }}>
-            <span className="badge outline-accent">{GAP_LABEL[current.gap]}</span>
-            <span className="card-meta">{current.purpose}</span>
+          <div className="segmented" role="tablist" aria-label="答え方">
+            <button
+              role="tab"
+              aria-selected={mode === "CHAT"}
+              className={mode === "CHAT" ? "on" : ""}
+              onClick={() => changeMode("CHAT")}
+            >
+              チャットで話す
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === "FORM"}
+              className={mode === "FORM" ? "on" : ""}
+              onClick={() => changeMode("FORM")}
+            >
+              欄ごとに書く
+            </button>
           </div>
-          <div className="bigq">{current.text}</div>
-          {current.parts.map((part, i) => (
-            <div className="field" key={part.key} style={{ marginTop: i === 0 ? 12 : 14 }}>
-              {current.parts.length > 1 && (
-                <label>
-                  {part.label}
-                  {part.optional && <span className="card-meta" style={{ marginLeft: 6 }}>任意</span>}
-                </label>
-              )}
+
+          {mode === "CHAT" ? (
+            <>
+              <div className="chat" style={{ marginTop: 12 }}>
+                {questions.map((q) => {
+                  const a = answerFor(q.id);
+                  const def = QUESTION_BANK.find((d) => d.code === q.questionCode);
+                  return (
+                    <div key={q.id} style={{ display: "contents" }}>
+                      <div className="bubble q">
+                        <div className="purpose">{GAP_LABEL[q.gap]} — {q.purpose}</div>
+                        {q.text}
+                      </div>
+                      {a && (a.skipped ? (
+                        <div className="bubble a skipped">わからないので飛ばしました</div>
+                      ) : (
+                        <>
+                          <div className="bubble a">{a.answerText.split("\n").map((line, i) => (
+                            <div key={i}>{line}</div>
+                          ))}</div>
+                          {a.mode === "CHAT" && def && def.parts.length > 1 && (
+                            <div className="filed-note">
+                              {def.parts
+                                .filter((part) => a.answerJson[part.key])
+                                .map((part) => part.label)
+                                .join(" / ")}
+                              に振り分けました。違っていたら「欄ごとに書く」で直せます。
+                            </div>
+                          )}
+                        </>
+                      ))}
+                    </div>
+                  );
+                })}
+                {!pendingQuestion && (
+                  <div className="bubble q">
+                    <div className="purpose">{GAP_LABEL[current.gap]} — {current.purpose}</div>
+                    {current.text}
+                  </div>
+                )}
+              </div>
+
               <VoiceTextarea
-                rows={current.parts.length > 1 ? 3 : 5}
-                autoFocus={i === 0}
-                value={draft[part.key] ?? ""}
-                onChange={(next) => setDraft((d) => ({ ...d, [part.key]: next }))}
-                placeholder={part.placeholder}
+                rows={4}
+                value={chatDraft}
+                onChange={setChatDraft}
+                placeholder={`思いつくまま話してください。例: ${current.parts[0].placeholder?.replace(/^例: /, "") ?? ""}`}
               />
-            </div>
-          ))}
-          <div className="hint" style={{ fontSize: 11.5, color: "var(--ink-faint)", margin: "4px 0 12px" }}>
-            話して入力もできます。回答は履歴に残り、あとから根拠として参照されます。
-          </div>
-          <button className="btn primary" onClick={submitAnswer} disabled={!canSubmit}>
-            回答を保存して次へ
-          </button>
+              <div className="hint" style={{ fontSize: 11.5, color: "var(--ink-faint)", margin: "4px 0 12px" }}>
+                {current.parts.length > 1
+                  ? `答えを「${current.parts.map((part) => part.label).join("」「")}」の欄へ自動で振り分けます。あとから直せます。`
+                  : "話して入力もできます。回答は履歴に残ります。"}
+              </div>
+              <button className="btn primary" onClick={submitChat} disabled={!chatDraft.trim()}>
+                答えて次の質問へ
+              </button>
+              <button className="btn ghost" style={{ marginTop: 4 }} onClick={skipQuestion}>
+                わからない・答えたくない(飛ばす)
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="chips" style={{ marginTop: 12 }}>
+                <span className="badge outline-accent">{GAP_LABEL[current.gap]}</span>
+                <span className="card-meta">{current.purpose}</span>
+              </div>
+              <div className="bigq">{current.text}</div>
+              {current.parts.map((part, i) => (
+                <div className="field" key={part.key} style={{ marginTop: i === 0 ? 12 : 14 }}>
+                  {current.parts.length > 1 && (
+                    <label>
+                      {part.label}
+                      {part.optional && <span className="card-meta" style={{ marginLeft: 6 }}>任意</span>}
+                    </label>
+                  )}
+                  <VoiceTextarea
+                    rows={current.parts.length > 1 ? 3 : 5}
+                    autoFocus={i === 0}
+                    value={draft[part.key] ?? ""}
+                    onChange={(next) => setDraft((d) => ({ ...d, [part.key]: next }))}
+                    placeholder={part.placeholder}
+                  />
+                </div>
+              ))}
+              <div className="hint" style={{ fontSize: 11.5, color: "var(--ink-faint)", margin: "4px 0 12px" }}>
+                話して入力もできます。回答は履歴に残り、あとから根拠として参照されます。
+              </div>
+              <button className="btn primary" onClick={submitAnswer} disabled={!canSubmit}>
+                回答を保存して次へ
+              </button>
+              <button className="btn ghost" style={{ marginTop: 4 }} onClick={skipQuestion}>
+                わからない・答えたくない(飛ばす)
+              </button>
+            </>
+          )}
           <button className="btn ghost" style={{ marginTop: 4 }} onClick={() => router.push(`/decisions/${decision.id}`)}>
             保存して中断する
           </button>
@@ -273,7 +401,7 @@ export default function DiagnosePage() {
         </>
       )}
 
-      {questions.length > 0 && (
+      {questions.length > 0 && (mode === "FORM" || locked) && (
         <>
           <button
             className="btn outline"
@@ -292,7 +420,12 @@ export default function DiagnosePage() {
                       <div className="purpose">{GAP_LABEL[q.gap]} — {q.purpose}</div>
                       {q.text}
                     </div>
-                    {a && <div className="bubble a">{a.answerText}</div>}
+                    {a &&
+                      (a.skipped ? (
+                        <div className="bubble a skipped">わからないので飛ばしました</div>
+                      ) : (
+                        <div className="bubble a">{a.answerText}</div>
+                      ))}
                   </div>
                 );
               })}

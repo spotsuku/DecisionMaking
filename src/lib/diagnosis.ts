@@ -24,6 +24,11 @@ export interface QuestionPart {
   placeholder?: string;
   /** 空欄のまま次へ進めるか */
   optional?: boolean;
+  /**
+   * チャットの自由文を欄へ振り分ける手掛かり。
+   * 本人の言葉の中に現れた語だけを見る。推測で内容を足さない(6.3)。
+   */
+  cues?: RegExp[];
 }
 
 export interface QuestionDef {
@@ -54,8 +59,14 @@ export const QUESTION_BANK: QuestionDef[] = [
     text: "この件は、誰が決めますか?",
     purpose: "決定権と責任範囲を確定する",
     parts: [
-      { key: "owner", label: "最終的に決める人", placeholder: "例: 自分 / 妻と相談 / 決裁は役員" },
-      { key: "scope", label: "あなたが決められる範囲", placeholder: "例: 予算50万円まではこちらで決められる" },
+      {
+        key: "owner", label: "最終的に決める人", placeholder: "例: 自分 / 妻と相談 / 決裁は役員",
+        cues: [/決め(る|ます|られる)/, /決定|決裁|判断する/, /自分|私|僕|妻|夫|上司|役員|家族/],
+      },
+      {
+        key: "scope", label: "あなたが決められる範囲", placeholder: "例: 予算50万円まではこちらで決められる",
+        cues: [/権限|裁量|範囲/, /まで(は|なら)/, /予算|承認|決裁/, /(までは|なら).*(自分|こちら|一人)/],
+      },
     ],
     requiredField: true,
     emotionalLoad: 1,
@@ -66,8 +77,14 @@ export const QUESTION_BANK: QuestionDef[] = [
     text: "いつまでに決めますか?",
     purpose: "決断期限と、超過したときに起きることを確定する",
     parts: [
-      { key: "due", label: "決める期限", placeholder: "例: 今週の金曜まで" },
-      { key: "consequence", label: "その日を過ぎると何が起きるか", placeholder: "例: 契約が自動更新される" },
+      {
+        key: "due", label: "決める期限", placeholder: "例: 今週の金曜まで",
+        cues: [/まで(に)?/, /今週|来週|今月|来月|月末|年内|\d+日|\d+月/, /期限/],
+      },
+      {
+        key: "consequence", label: "その日を過ぎると何が起きるか", placeholder: "例: 契約が自動更新される",
+        cues: [/過ぎる|超える|遅れる|間に合わ/, /しないと|なければ|逃す|失う|失効|更新|流れる/, /(なって|になり)しまう/],
+      },
     ],
     requiredField: true,
     emotionalLoad: 0,
@@ -78,8 +95,16 @@ export const QUESTION_BANK: QuestionDef[] = [
     text: "この選択で、何を守り、何を諦めますか?",
     purpose: "判断基準とトレードオフを言語化する",
     parts: [
-      { key: "protect", label: "守りたいもの", placeholder: "例: 家族との時間" },
-      { key: "giveup", label: "諦めてもいいもの", placeholder: "例: 年収の上積み" },
+      {
+        key: "protect", label: "守りたいもの",
+        placeholder: "例: 家族との時間",
+        cues: [/守(る|り|りたい)/, /大事|大切|重要|優先|必要/, /譲れない|欠かせない|外せない/],
+      },
+      {
+        key: "giveup", label: "諦めてもいいもの",
+        placeholder: "例: 年収の上積み",
+        cues: [/諦め|あきらめ/, /捨て|手放|妥協|我慢|目をつむ/, /(譲|割り切)(る|って|れる|り)/, /なくてもいい|でもいい|構わない/],
+      },
     ],
     requiredField: true,
     emotionalLoad: 1,
@@ -90,8 +115,16 @@ export const QUESTION_BANK: QuestionDef[] = [
     text: "何が分かれば、判断が変わりますか?",
     purpose: "不足情報と情報収集の停止条件を定義する",
     parts: [
-      { key: "missing", label: "分かれば評価が変わること", placeholder: "例: 世話にかかる実際の時間" },
-      { key: "stop", label: "これ以上調べても変わらない条件", placeholder: "例: 見学2件まで。それ以上は調べない" },
+      {
+        key: "missing", label: "分かれば評価が変わること",
+        placeholder: "例: 世話にかかる実際の時間",
+        cues: [/分かれ(ば|たら)|知りたい|確かめ|確認したい/, /分からない|不明|見えない|把握できて/],
+      },
+      {
+        key: "stop", label: "これ以上調べても変わらない条件",
+        placeholder: "例: 見学2件まで。それ以上は調べない",
+        cues: [/それ以上|これ以上/, /(止め|やめ|打ち切|切り上げ)(る|ます|た)/, /まで(で|に)?(いい|十分|終わり)/, /十分|そろえば|集まれば/],
+      },
     ],
     requiredField: true,
     emotionalLoad: 0,
@@ -113,8 +146,16 @@ export const QUESTION_BANK: QuestionDef[] = [
     text: "選んだ案がうまくいかないとしたら?",
     purpose: "ネガティブ予測と損失上限を先に言語化する",
     parts: [
-      { key: "path", label: "失敗する筋道", placeholder: "例: 世話が続かず家族に負担が偏る" },
-      { key: "loss", label: "引き受けられる損失の上限", placeholder: "例: 月3万円と、平日の朝夕30分まで" },
+      {
+        key: "path", label: "失敗する筋道",
+        placeholder: "例: 世話が続かず家族に負担が偏る",
+        cues: [/失敗|うまくいかな|続かな|崩れ|破綻|こじれ/, /負担|しわ寄せ|偏(る|って)/, /(たら|なると).*(困|まず|きつ)/],
+      },
+      {
+        key: "loss", label: "引き受けられる損失の上限",
+        placeholder: "例: 月3万円と、平日の朝夕30分まで",
+        cues: [/上限|限度|以内|まで(なら)?/, /損失|損|赤字|持ち出し/, /許容|引き受け|耐えられ|受け入れ/, /\d+(万|円|時間|分|ヶ月|か月|日|%)/],
+      },
     ],
     requiredField: false,
     emotionalLoad: 2,
@@ -125,13 +166,81 @@ export const QUESTION_BANK: QuestionDef[] = [
     text: "この件を考えるとき、どんな気持ちになりますか?",
     purpose: "感情と情報を分けて扱う",
     parts: [
-      { key: "feeling", label: "浮かぶ気持ち", placeholder: "例: 楽しみだけど、責任が怖い" },
-      { key: "interrupt", label: "考えるのを中断したくなる瞬間", placeholder: "なければ空欄で大丈夫です", optional: true },
+      {
+        key: "feeling", label: "浮かぶ気持ち",
+        placeholder: "例: 楽しみだけど、責任が怖い",
+        cues: [/不安|怖|こわ|楽しみ|嬉し|わくわく|しんどい|重い|焦|モヤ|イライラ|罪悪感|気持ち/],
+      },
+      {
+        key: "interrupt", label: "考えるのを中断したくなる瞬間",
+        placeholder: "なければ空欄で大丈夫です", optional: true,
+        cues: [/中断|やめたく|逃げ|考えたくな|見たくな|後回し|止まる|手が止ま|放り出/],
+      },
     ],
     requiredField: false,
     emotionalLoad: 2,
   },
 ];
+
+// -------------------------------------- チャットの自由文を記入欄へ振り分ける
+
+/** 「。」「!」「?」改行で切る。journal と違い、短文も落とさない */
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[。!?！?])|\n+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+/**
+ * チャットで受け取った一続きの答えを、質問の記入欄ごとに振り分ける。
+ *
+ * ルール(決定的・説明可能):
+ *   1. 文ごとに、各欄の cues に何個当たるかを数える。
+ *   2. 最も多く当たった欄へ入れる。同数なら先の欄。
+ *   3. どこにも当たらない文は、直前の文と同じ欄へ入れる(話は続くため)。
+ *      先頭から当たらない場合は第1欄へ。
+ *
+ * 本人の言葉をそのまま移すだけで、要約も追記もしない(INV-04 / 6.3)。
+ * 振り分けは下書きであり、フォームで本人が直せる(INV-05)。
+ */
+export function splitFreeText(def: QuestionDef, text: string): Record<string, string> {
+  const body = text.trim();
+  if (!body) return {};
+  if (def.parts.length === 1) return { [def.parts[0].key]: body };
+
+  const buckets = new Map<string, string[]>(def.parts.map((p) => [p.key, []]));
+  let cursor = 0; // 直前の文が入った欄
+
+  for (const sentence of splitSentences(body)) {
+    let bestIndex = -1;
+    let bestHits = 0;
+    def.parts.forEach((part, i) => {
+      const hits = (part.cues ?? []).filter((c) => c.test(sentence)).length;
+      if (hits > bestHits) {
+        bestHits = hits;
+        bestIndex = i;
+      }
+    });
+    if (bestIndex >= 0) cursor = bestIndex;
+    buckets.get(def.parts[cursor].key)!.push(sentence);
+  }
+
+  const out: Record<string, string> = {};
+  for (const part of def.parts) {
+    const value = (buckets.get(part.key) ?? []).join("").trim();
+    if (value) out[part.key] = value;
+  }
+  return out;
+}
+
+/** 記入欄の値を、履歴表示用の一本のテキストにまとめる */
+export function joinParts(def: QuestionDef, values: Record<string, string>): string {
+  const filled = def.parts.filter((p) => (values[p.key] ?? "").trim() !== "");
+  if (filled.length === 0) return "";
+  if (def.parts.length === 1) return (values[filled[0].key] ?? "").trim();
+  return filled.map((p) => `${p.label}: ${(values[p.key] ?? "").trim()}`).join("\n");
+}
 
 // ---------------------------------------------------- 第1層: 成立条件の診断
 
@@ -146,7 +255,8 @@ export function assessGaps(
   version: DecisionVersion,
   dueAt: string | null
 ): GapStatus[] {
-  const answers = db.answers.filter((a) => a.versionId === version.id);
+  // スキップされた回答は記録には残るが、成立条件を埋めたとは数えない
+  const answers = db.answers.filter((a) => a.versionId === version.id && !a.skipped);
   const byCode = (code: string) => answers.find((a) => a.questionCode === code);
   const criteria = db.criteria.filter((c) => c.versionId === version.id);
   const options = db.options.filter((o) => o.versionId === version.id && o.active);

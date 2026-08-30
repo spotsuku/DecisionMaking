@@ -98,8 +98,15 @@ export interface DiagnosticAnswer {
   answerText: string;
   /** 記入欄ごとの構造値(設計書3.3 answer_json)。後段の判定はこちらを使う */
   answerJson: Record<string, string>;
+  /** 「わからない」で飛ばした記録。追記は残すが、成立条件は埋まっていない */
+  skipped?: boolean;
+  /** どちらの聞き方で答えたか。CHATは自由文を欄へ自動振り分けした下書きを含む */
+  mode?: AnswerMode;
   submittedAt: string;
 }
+
+/** 診断の答え方。チャット=自由文、フォーム=欄ごとの記入 */
+export type AnswerMode = "CHAT" | "FORM";
 
 export interface BlockerAssessment {
   id: string;

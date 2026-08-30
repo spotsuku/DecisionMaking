@@ -12,6 +12,7 @@ import type {
   ActionItem,
   ActionRole,
   ActionStatus,
+  AnswerMode,
   Attribution,
   BlockerAssessment,
   Criterion,
@@ -223,7 +224,8 @@ class Store {
   recordAnswer(
     questionId: string,
     answerText: string,
-    answerJson: Record<string, string> = {}
+    answerJson: Record<string, string> = {},
+    opts: { skipped?: boolean; mode?: AnswerMode } = {}
   ): DiagnosticAnswer {
     this.load();
     const q = this.db.questions.find((x) => x.id === questionId);
@@ -235,10 +237,12 @@ class Store {
       questionCode: q.questionCode,
       answerText,
       answerJson,
+      skipped: opts.skipped ?? false,
+      mode: opts.mode ?? "FORM",
       submittedAt: now(),
     };
     this.db.answers.push(answer);
-    this.audit("answer", answer.id, "SUBMITTED", q.questionCode);
+    this.audit("answer", answer.id, opts.skipped ? "SKIPPED" : "SUBMITTED", q.questionCode);
     this.persist();
     return answer;
   }

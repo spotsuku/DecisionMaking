@@ -291,6 +291,24 @@ input[type="checkbox"], input[type="radio"] {
 .bubble.q { align-self: flex-start; background: var(--surface); }
 .bubble.q .purpose { font-size: 11px; color: var(--ink-soft); font-weight: 700; margin-bottom: 3px; letter-spacing: 0.04em; }
 .bubble.a { align-self: flex-end; background: var(--ink); color: #fff; }
+.bubble.a.skipped { background: var(--surface); color: var(--ink-soft); font-size: 12.5px; }
+.filed-note {
+  align-self: flex-end; max-width: 88%; font-size: 11px; color: var(--ink-faint);
+  margin-top: -4px; text-align: right; line-height: 1.5;
+}
+
+/* 答え方の切り替え(チャット / 欄ごと) */
+.segmented {
+  display: flex; gap: 4px; padding: 3px; margin-top: 10px;
+  background: var(--surface); border-radius: 999px;
+}
+.segmented button {
+  flex: 1; border: none; background: transparent; cursor: pointer;
+  padding: 8px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; color: var(--ink-soft);
+  font-family: inherit; min-height: 38px;
+}
+.segmented button.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 
 /* ---------------------------------- callouts / gates / meters */
 
