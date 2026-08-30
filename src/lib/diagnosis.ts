@@ -28,7 +28,7 @@ export const QUESTION_BANK: QuestionDef[] = [
   {
     code: "Q_FRAME_SENTENCE",
     gap: "QUESTION",
-    text: "いま考えていることを「AかBか」の一文にすると、どうなりますか?",
+    text: "いま考えていることは、何を決める話ですか? 一文にしてみてください。",
     purpose: "何を決めるかを一文で確定する",
     requiredField: true,
     emotionalLoad: 0,

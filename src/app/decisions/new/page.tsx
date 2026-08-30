@@ -34,7 +34,7 @@ export default function NewDecisionPage() {
   const safety = classifySafety(domain, `${title} ${question}`);
 
   const submit = () => {
-    if (!question.trim()) return setError("「AかBか」の一文を入力してください");
+    if (!question.trim()) return setError("何を決めるのかを一文で入力してください");
     if (!title.trim()) return setError("タイトルを入力してください");
     const { decision } = store.createDecision({
       title: title.trim(),
@@ -71,10 +71,12 @@ export default function NewDecisionPage() {
       )}
 
       <div className="field">
-        <label>何を決めますか?「AかBか」の一文で<span className="req">*</span></label>
+        <label>何を決めますか?<span className="req">*</span></label>
         <textarea rows={3} value={question} onChange={(e) => setQuestion(e.target.value)}
-          placeholder="例: 媒体経由の採用を続けるか、紹介採用へ集中するか" />
-        <div className="hint">「検討中」「様子見」は問いではありません。選択肢が見える形に。</div>
+          placeholder={"例: 犬を家に迎えるかどうか\n例: どの物件に移転するか"} />
+        <div className="hint">
+          決めることが分かる一文で。選択肢はこのあと整理するので、今は絞れていなくて大丈夫です。
+        </div>
       </div>
 
       <div className="field">

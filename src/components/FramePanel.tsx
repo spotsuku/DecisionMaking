@@ -32,8 +32,9 @@ export function FramePanel({ decision, version }: { decision: Decision; version:
     <div className="card strong">
       <h2 className="section" style={{ marginTop: 0 }}>問いを定める(S1 Frame)</h2>
       <div className="field">
-        <label>何を決めますか?「AかBか」の一文<span className="req">*</span></label>
+        <label>何を決めますか?<span className="req">*</span></label>
         <textarea value={question} onChange={(e) => setQuestion(e.target.value)} />
+        <div className="hint">決めることが分かる一文で。選択肢はこのあと整理します。</div>
       </div>
       <div className="form-grid">
         <div className="field">
