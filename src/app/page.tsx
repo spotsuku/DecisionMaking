@@ -77,7 +77,7 @@ export default function HomePage() {
           </div>
           <div className="home-hello">こんにちは。</div>
         </div>
-        <Link href="/identity" className="avatar-btn" aria-label="アカウント">
+        <Link href="/account" className="avatar-btn" aria-label="マイページ">
           <span className="avatar"><IconUser /></span>
         </Link>
       </div>
