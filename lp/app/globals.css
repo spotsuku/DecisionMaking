@@ -108,3 +108,7 @@ a.primary{align-items:center;text-decoration:none}
   .quoteFeature .quoteCopy{order:1}
   .quoteFeature .quotePortrait{order:2}
 }
+
+/* ヒーローの画面は黒地のアプリになったので、LPの黒に溶けて端が消える。
+   縁を少し強くして、画面がそこにあると分かるようにする */
+.phoneWrap .shotFrame{box-shadow:0 22px 46px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.28)}
