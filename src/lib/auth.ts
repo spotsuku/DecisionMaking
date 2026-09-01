@@ -59,26 +59,26 @@ export function needsAccount(state: AuthState): boolean {
 }
 
 /**
- * 送信できなかったときに本人へ出す文。
+ * 送信できなかったときに出す文。
  *
- * Supabaseの生のメッセージは、そのまま出すと「HTTP 504」のような
- * 本人にはどうしようもない文字列になる。何が起きたのか・次にどうすればいいのかを
- * 日本語で言う。原因追跡のための符号は、末尾に小さく残す。
+ * Supabaseの生のメッセージは「HTTP 504」のような、本人には手の打ちようがない
+ * 文字列になる。何が起きたかを一文で言い、本人にできることがあるときだけ求める。
+ * 追跡用の符号は末尾に添える。
  */
 export function sendErrorText(error: { message: string; status?: number }): string {
   const m = error.message ?? "";
   const status = error.status ?? 0;
   if (/rate limit|too many|over_email_send_rate/i.test(m)) {
-    return "送信が続いています。少し待ってからお試しください。";
+    return "送信回数の上限に達しました。時間をおいて再度お試しください。";
   }
   if (/invalid|valid email|email_address_invalid/i.test(m)) {
-    return "メールアドレスの形式をご確認ください。";
+    return "メールアドレスの形式が正しくありません。";
   }
-  // 504/タイムアウト = こちらのメール送信設定の問題。本人の操作では直らない
+  // 504/タイムアウトはサーバー側。本人が直せることはない
   if (status === 504 || status >= 500 || /timeout|deadline|gateway/i.test(m)) {
-    return `いまメールを送れませんでした。こちらの送信設定の問題で、時間をおいても続くようなら直します。書いた記録はこの端末に残っているので、消えていません。(${status || "送信エラー"})`;
+    return `メールを送信できませんでした。サーバー側の問題です。記録はこの端末に残っています。(${status || "timeout"})`;
   }
-  return `送信できませんでした。少し時間をおいてお試しください。(${m.slice(0, 60)})`;
+  return `メールを送信できませんでした。(${m.slice(0, 60)})`;
 }
 
 /** メールにリンクを送る。パスワードは持たせない */
@@ -93,7 +93,7 @@ export async function sendMagicLink(email: string, redirectTo: string): Promise<
     if (error) return { ok: false, error: sendErrorText(error) };
     return { ok: true };
   } catch {
-    return { ok: false, error: "通信できませんでした。電波の良い場所で、もう一度お試しください。" };
+    return { ok: false, error: "通信に失敗しました。接続を確認して再度お試しください。" };
   }
 }
 

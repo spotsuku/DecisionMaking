@@ -78,12 +78,12 @@ describe("メールを送れなかったときの文", () => {
   it("504は、本人の操作では直らないと伝える。記録が無事なことも言う", () => {
     const text = sendErrorText({ message: "HTTP 504", status: 504 });
     expect(text).not.toMatch(/HTTP/);
-    expect(text).toMatch(/送信設定/);
-    expect(text).toMatch(/消えていません/);
+    expect(text).toMatch(/サーバー側/);
+    expect(text).toMatch(/この端末に残っています/);
   });
 
   it("送信上限は、待てば直ると伝える", () => {
-    expect(sendErrorText({ message: "email rate limit exceeded" })).toMatch(/少し待って/);
+    expect(sendErrorText({ message: "email rate limit exceeded" })).toMatch(/上限/);
   });
 
   it("アドレスの形式は、本人が直せるのでそう言う", () => {
