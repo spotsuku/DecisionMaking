@@ -16,6 +16,16 @@ npm run dev     # http://localhost:3000
 npm run build   # 静的出力 → out/
 ```
 
+## ドメイン
+
+| | 環境変数 | 現在の既定値 |
+|---|---|---|
+| LP自身のURL(OGPの基準) | `NEXT_PUBLIC_SITE_URL` | decision-making-alpha.vercel.app |
+| アプリ本体のURL(全CTAの飛び先) | `NEXT_PUBLIC_APP_URL` | decision-making-app-spotsukus-projects.vercel.app |
+
+独自ドメインへ移すときは、**先にVercelでドメインを紐づけてDNSが通ってから**この2つを設定して
+再デプロイする。順番を逆にすると、LPのボタンが存在しないURLを指す時間ができる。
+
 ## アプリへのリンク
 
 LP内の「無料で始める」などはすべてアプリ本体へのリンク。URLは `app/site.ts` の

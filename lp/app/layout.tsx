@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 // 共有時に出る文言。アプリの実装(src/lib/plan.ts)と食い違わせない。
-const SITE = "https://decision-making-alpha.vercel.app";
+//
+// LP自身のURL。独自ドメインを当てたら NEXT_PUBLIC_SITE_URL を設定する。
+// OGPの画像URLはここを基準に絶対URL化されるので、ドメインを変えたら必ず更新する
+// (古いドメインのままだと、共有カードの画像が出なくなる)。
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://decision-making-alpha.vercel.app";
 const TITLE = "決めろ。| DECISION MAKING";
 const DESCRIPTION =
   "迷っていることを話すだけ。決めるべきことをアプリが拾い、判断基準・選択肢・両面予測・最初の行動まで記録に残します。決断2件まで無料。";
