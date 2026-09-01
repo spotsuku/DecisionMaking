@@ -3,7 +3,7 @@
 // 一番守りたいのは「登録なしで書いたものが、登録した瞬間に消えないこと」。
 
 import { describe, it, expect } from "vitest";
-import { needsAccount, type AuthState } from "../src/lib/auth";
+import { needsAccount, sendErrorText, type AuthState } from "../src/lib/auth";
 import { mergeDB } from "../src/lib/db/sync";
 import { emptyDB, type DB } from "../src/lib/types";
 
@@ -71,5 +71,28 @@ describe("登録前に書いたものの引き継ぎ", () => {
     const merged = mergeDB(local(), stale);
     expect(merged.decisions).toHaveLength(1);
     expect(merged.decisions[0].title).toBe("犬を迎えるか");
+  });
+});
+
+describe("メールを送れなかったときの文", () => {
+  it("504は、本人の操作では直らないと伝える。記録が無事なことも言う", () => {
+    const text = sendErrorText({ message: "HTTP 504", status: 504 });
+    expect(text).not.toMatch(/HTTP/);
+    expect(text).toMatch(/送信設定/);
+    expect(text).toMatch(/消えていません/);
+  });
+
+  it("送信上限は、待てば直ると伝える", () => {
+    expect(sendErrorText({ message: "email rate limit exceeded" })).toMatch(/少し待って/);
+  });
+
+  it("アドレスの形式は、本人が直せるのでそう言う", () => {
+    expect(sendErrorText({ message: "Unable to validate email address: invalid format" })).toMatch(/形式/);
+  });
+
+  it("生のメッセージをそのまま画面に出さない", () => {
+    for (const m of ["HTTP 504", "context deadline exceeded", "Internal Server Error"]) {
+      expect(sendErrorText({ message: m, status: 500 })).not.toBe(m);
+    }
   });
 });

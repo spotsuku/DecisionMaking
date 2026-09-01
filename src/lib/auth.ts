@@ -58,6 +58,29 @@ export function needsAccount(state: AuthState): boolean {
   return state.status === "ANONYMOUS";
 }
 
+/**
+ * 送信できなかったときに本人へ出す文。
+ *
+ * Supabaseの生のメッセージは、そのまま出すと「HTTP 504」のような
+ * 本人にはどうしようもない文字列になる。何が起きたのか・次にどうすればいいのかを
+ * 日本語で言う。原因追跡のための符号は、末尾に小さく残す。
+ */
+export function sendErrorText(error: { message: string; status?: number }): string {
+  const m = error.message ?? "";
+  const status = error.status ?? 0;
+  if (/rate limit|too many|over_email_send_rate/i.test(m)) {
+    return "送信が続いています。少し待ってからお試しください。";
+  }
+  if (/invalid|valid email|email_address_invalid/i.test(m)) {
+    return "メールアドレスの形式をご確認ください。";
+  }
+  // 504/タイムアウト = こちらのメール送信設定の問題。本人の操作では直らない
+  if (status === 504 || status >= 500 || /timeout|deadline|gateway/i.test(m)) {
+    return `いまメールを送れませんでした。こちらの送信設定の問題で、時間をおいても続くようなら直します。書いた記録はこの端末に残っているので、消えていません。(${status || "送信エラー"})`;
+  }
+  return `送信できませんでした。少し時間をおいてお試しください。(${m.slice(0, 60)})`;
+}
+
 /** メールにリンクを送る。パスワードは持たせない */
 export async function sendMagicLink(email: string, redirectTo: string): Promise<{ ok: boolean; error?: string }> {
   const sb = supabase();
@@ -67,13 +90,7 @@ export async function sendMagicLink(email: string, redirectTo: string): Promise<
       email: email.trim(),
       options: { emailRedirectTo: redirectTo },
     });
-    if (error) {
-      // 送信の上限に当たることが多いので、そこだけ言い換える
-      if (/rate limit|too many/i.test(error.message)) {
-        return { ok: false, error: "送信が続いています。少し待ってからお試しください。" };
-      }
-      return { ok: false, error: error.message };
-    }
+    if (error) return { ok: false, error: sendErrorText(error) };
     return { ok: true };
   } catch {
     return { ok: false, error: "通信できませんでした。電波の良い場所で、もう一度お試しください。" };
