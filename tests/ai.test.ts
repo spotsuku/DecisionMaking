@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 import { mergeCandidates, mergeSplit } from "../src/lib/ai/merge";
+import { brainstormPrompt } from "../src/lib/ai/prompts";
 import type { Candidate } from "../src/lib/journal";
 
 const rule = (text: string, kind: Candidate["kind"] = "QUESTION"): Candidate => ({ text, kind });
@@ -56,5 +57,29 @@ describe("欄への振り分けの合流(作文を通さない)", () => {
 
   it("AIが空を返したらルールの結果を使う", () => {
     expect(mergeSplit(said, rules, {}, keys)).toEqual({ values: rules, source: "RULE" });
+  });
+});
+
+describe("書き出しのプロンプト", () => {
+  const { system } = brainstormPrompt({ task: "brainstorm", turns: [{ from: "USER", text: "出資を受けるかどうか" }], fallback: "" });
+
+  it("決めるための材料を渡す。渡さないと気持ちや経緯を掘りに行く", () => {
+    expect(system).toMatch(/いつまでに決めなければいけない/);
+    expect(system).toMatch(/選べる案/);
+    expect(system).toMatch(/何が分かれば決められる/);
+  });
+
+  it("経緯や気持ちを掘らせない", () => {
+    expect(system).toMatch(/経緯そのものを掘らない/);
+  });
+
+  it("決めるのは本人。助言はさせない", () => {
+    expect(system).toMatch(/助言/);
+    expect(system).toMatch(/決めるのは本人/);
+  });
+
+  it("文の形は指定しない(型を繰り返す原因になる)", () => {
+    expect(system).not.toMatch(/受け止めてから/);
+    expect(system).not.toMatch(/問いで終える/);
   });
 });

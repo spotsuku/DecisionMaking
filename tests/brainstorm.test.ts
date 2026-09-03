@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
   addAppTurn, addUserTurn, emptyBrainstorm, fallbackPrompt,
-  readyToDecide, shouldInvite, transcript, USEFUL_TO_SURFACE, type BrainstormState,
+  readyToDecide, shouldInvite, transcript, type BrainstormState,
 } from "../src/lib/brainstorm";
 
 /** 実際の会話のように、問いを出して答えるを繰り返す */
@@ -88,14 +88,6 @@ describe("候補の抽出", () => {
 
   it("空の発言は無視する", () => {
     expect(addUserTurn(emptyBrainstorm(), "   ").turns).toHaveLength(0);
-  });
-});
-
-describe("AIへ渡す情報", () => {
-  it("診断で効いてくる論点を、AIへの手がかりとして渡せる", () => {
-    expect(USEFUL_TO_SURFACE.length).toBeGreaterThan(0);
-    // 命令ではなく論点なので、疑問符で終わる問い文にはしない
-    for (const u of USEFUL_TO_SURFACE) expect(u, u).not.toMatch(/[?？]$/);
   });
 });
 

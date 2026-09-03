@@ -210,13 +210,3 @@ export function shouldInvite(state: BrainstormState, dismissedAtTurn: number | n
   return noNewCandidates(state, 2);
 }
 
-/**
- * 会話の中で見えてくると、あとの診断が楽になること。
- * AIには「必ず聞け」ではなく「見えてきたら拾って」として渡す。
- */
-export const USEFUL_TO_SURFACE = [
-  "いつまでに決まっていないと困るか",
-  "本人一人で決められるのか、誰かの合意が要るのか",
-  "詰まっているのは情報が足りないからか、決めたあとが不安だからか",
-  "決めずに置いたままだと何が起きるか",
-];
