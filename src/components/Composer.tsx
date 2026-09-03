@@ -48,6 +48,15 @@ export function Composer({
           el.style.height = "auto";
           el.style.height = `${Math.min(el.scrollHeight, 148)}px`;
         }}
+        onKeyDown={(e) => {
+          // ⌘+Enter / Ctrl+Enter で送る。Enter単体は改行のまま
+          // (書きかけで送ってしまう方が損が大きい)。
+          // 日本語入力の変換中は送らない ── 未確定の文字が飛んでしまう
+          if (e.key !== "Enter" || !(e.metaKey || e.ctrlKey)) return;
+          if (e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          if (canSend) onSend();
+        }}
       />
       {listening && (
         // 聞こえている内容をその場で出す。無反応だと拾えているか分からない

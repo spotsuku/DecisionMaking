@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { activeProvider, callChat, callModel, modelFor } from "@/lib/ai/provider";
-import { toChatMessages } from "@/lib/ai/chat";
+import { CHAT_STYLE, toChatMessages } from "@/lib/ai/chat";
 import { rateLimit, sameOrigin } from "@/lib/ai/guard";
 import { extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
 import type { AiRequest, BrainstormResult, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
@@ -44,6 +44,7 @@ export async function GET(request: Request) {
     try {
       const r = await callChat({
         kind: "chat",
+        system: CHAT_STYLE,
         messages: [{ role: "user", content: "出資を受けるかどうか迷っています" }],
         maxTokens: 400,
       });
@@ -127,7 +128,12 @@ export async function POST(request: Request) {
     }
     if (body.task === "brainstorm") {
       // 指示は付けない。やりとりだけを渡して、素の応答を返す
-      const r = await callChat({ kind: "chat", messages: toChatMessages(body.turns), maxTokens: 400 });
+      const r = await callChat({
+        kind: "chat",
+        system: CHAT_STYLE,
+        messages: toChatMessages(body.turns),
+        maxTokens: 400,
+      });
       const result: BrainstormResult = { text: r.text };
       return NextResponse.json({ ok: true, result, usage: r.usage });
     }

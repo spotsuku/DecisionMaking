@@ -126,15 +126,19 @@ export interface ChatTurn {
   content: string;
 }
 
-async function chatOpenAI(o: { model: string; messages: ChatTurn[]; maxTokens: number; signal?: AbortSignal }) {
+async function chatOpenAI(o: { model: string; system?: string; messages: ChatTurn[]; maxTokens: number; signal?: AbortSignal }) {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
-    // system も response_format も付けない。会話だけを渡す
-    body: JSON.stringify({ model: o.model, max_completion_tokens: o.maxTokens, messages: o.messages }),
+    // response_format は付けない(JSONを要求すると、そのぶん指示が増える)
+    body: JSON.stringify({
+      model: o.model,
+      max_completion_tokens: o.maxTokens,
+      messages: o.system ? [{ role: "system", content: o.system }, ...o.messages] : o.messages,
+    }),
     signal: o.signal,
   });
   if (!res.ok) throw new Error(`openai ${res.status}`);
@@ -152,7 +156,7 @@ async function chatOpenAI(o: { model: string; messages: ChatTurn[]; maxTokens: n
   };
 }
 
-async function chatAnthropic(o: { model: string; messages: ChatTurn[]; maxTokens: number; signal?: AbortSignal }) {
+async function chatAnthropic(o: { model: string; system?: string; messages: ChatTurn[]; maxTokens: number; signal?: AbortSignal }) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -160,8 +164,7 @@ async function chatAnthropic(o: { model: string; messages: ChatTurn[]; maxTokens
       "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
       "anthropic-version": "2023-06-01",
     },
-    // system は付けない
-    body: JSON.stringify({ model: o.model, max_tokens: o.maxTokens, messages: o.messages }),
+    body: JSON.stringify({ model: o.model, max_tokens: o.maxTokens, system: o.system, messages: o.messages }),
     signal: o.signal,
   });
   if (!res.ok) throw new Error(`anthropic ${res.status}`);
@@ -185,12 +188,20 @@ async function chatAnthropic(o: { model: string; messages: ChatTurn[]; maxTokens
  */
 export async function callChat(opts: {
   kind: "cheap" | "chat";
+  /** 付けるのは媒体と立場だけ。会話の中身は指定しない(ai/chat.ts の CHAT_STYLE) */
+  system?: string;
   messages: ChatTurn[];
   maxTokens: number;
   signal?: AbortSignal;
 }): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number }; model: string }> {
   const provider = activeProvider();
   if (!provider) throw new Error("APIキーが設定されていません");
-  const args = { model: modelFor(opts.kind), messages: opts.messages, maxTokens: opts.maxTokens, signal: opts.signal };
+  const args = {
+    model: modelFor(opts.kind),
+    system: opts.system,
+    messages: opts.messages,
+    maxTokens: opts.maxTokens,
+    signal: opts.signal,
+  };
   return provider === "openai" ? chatOpenAI(args) : chatAnthropic(args);
 }
