@@ -4,9 +4,10 @@
 // 同じ問いを永久に返していた。
 
 import { describe, it, expect } from "vitest";
+import * as brainstorm from "../src/lib/brainstorm";
 import {
   addAppTurn, addUserTurn, emptyBrainstorm, fallbackPrompt,
-  readyToDecide, shouldInvite, transcript, type BrainstormState,
+  readyToDecide, transcript, type BrainstormState,
 } from "../src/lib/brainstorm";
 
 /** 実際の会話のように、問いを出して答えるを繰り返す */
@@ -126,76 +127,12 @@ describe("問いが話題を奪わない", () => {
   });
 });
 
-describe("決めてみないかと誘うタイミング", () => {
-  /** 会話を組み立てる。件数ではなく流れで判断していることを確かめる */
-  function talk(...said: string[]): BrainstormState {
-    let s = emptyBrainstorm();
-    for (const t of said) {
-      s = addUserTurn(s, t);
-      s = addAppTurn(s, "はい。", undefined);
-    }
-    return s;
-  }
-
-  it("話し始めたばかりでは誘わない", () => {
-    expect(shouldInvite(talk("犬を飼うか迷ってる"), null)).toBe(false);
-    expect(shouldInvite(talk("犬を飼うか迷ってる", "世話が心配"), null)).toBe(false);
-  });
-
-  it("決めごとが1つも見えていなければ誘わない", () => {
-    expect(shouldInvite(talk("疲れた", "よく寝ていない", "特にない"), null)).toBe(false);
-  });
-
-  it("受入テスト: 「特にない」で止まったら誘う(出しきったサイン)", () => {
-    const s = talk("犬を飼うかどうか迷ってる", "世話は妻に頼ることになりそう", "費用も調べた", "特にない");
-    expect(shouldInvite(s, null)).toBe(true);
-  });
-
-  it("止まっていても、3往復では早い(掘り始めたところで切らない)", () => {
-    const s = talk("犬を飼うかどうか迷ってる", "世話は妻に頼ることになりそう", "特にない");
-    expect(shouldInvite(s, null)).toBe(false);
-  });
-
-  it("受入テスト: 掘っている最中は誘わない(候補が増えないのは深まっている証拠でもある)", () => {
-    // 「正直そこまで深く付き合いたくはない」のような踏み込んだ発言のあとに
-    // 「これを決めにいきますか?」と出て、話を切っていた
-    const s = talk("犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話したが折り合わない");
-    expect(s.candidates).toHaveLength(1);
-    expect(shouldInvite(s, null)).toBe(false);
-  });
-
-  it("長く話して、発言が短くなってきたら誘う", () => {
-    const s = talk(
-      "犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話した",
-      "散歩は朝がいい", "留守番が心配", "実家も遠い", "うん", "そうだね"
-    );
-    expect(shouldInvite(s, null)).toBe(true);
-  });
-
-  it("まだ新しい決めごとが出ている間は誘わない(話を遮らない)", () => {
-    const s = talk("犬を飼うかどうか迷ってる", "転職するかどうかも決めきれない", "実家の帰省もまだ決めてない");
-    expect(s.candidates.length).toBeGreaterThan(1);
-    expect(shouldInvite(s, null)).toBe(false);
-  });
-
-  it("件数では決めない(2件あっても、まだ出ている最中なら誘わない)", () => {
-    const s = talk("犬を飼うかどうか迷う", "転職するかどうかも迷う");
-    expect(s.candidates).toHaveLength(2);
-    expect(shouldInvite(s, null)).toBe(false);
-  });
-
-  it("一度断られたら、しばらく黙る", () => {
-    const s = talk("犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話した");
-    expect(shouldInvite(s, 3)).toBe(false);
-    const more = addAppTurn(addUserTurn(addAppTurn(addUserTurn(s, "まだ考え中"), "はい。"), "他にもある"), "はい。");
-    expect(shouldInvite(more, 3)).toBe(false);
-  });
-
-  it("黙る期間が過ぎて、また落ち着いたら誘う", () => {
-    let s = talk("犬を飼うかどうか迷ってる", "費用は月3万円くらい", "妻とは何度か話した");
-    for (const t of ["まだ考え中", "うーん", "特にない"]) {
-      s = addAppTurn(addUserTurn(s, t), "はい。");
-    }
-    expect(shouldInvite(s, 3)).toBe(true);
+describe("こちらから決断を促さない", () => {
+  it("誘う判定を持たない(数往復で決断を要求する機能は外した)", () => {
+    // 3〜4往復で「これを決めにいきますか?」と出すのは、話している最中に
+    // 決断を要求することになる。決めるのは本人(INV-05)。
+    // 決断として立てたくなったら、候補一覧からいつでも立てられる
+    expect("shouldInvite" in brainstorm).toBe(false);
+    expect("inviteText" in brainstorm).toBe(false);
   });
 });

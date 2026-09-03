@@ -522,13 +522,6 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 }
 .local-only .chev { margin-left: auto; color: var(--ink-faint); flex: none; }
 
-/* 決めてみないかの誘い。会話ではなくアプリからの提案なので、吹き出しにしない */
-.invite {
-  margin-top: 18px; padding: 15px 17px;
-  background: var(--surface); border-radius: var(--r-card);
-}
-.invite .it { font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; }
-.invite .id { font-size: 12.5px; color: var(--ink-soft); line-height: 1.8; margin-top: 5px; }
 
 /* ---------------------------------- 入力欄(チャット) */
 
@@ -599,8 +592,6 @@ table.data td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical
 @keyframes hearing { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
 
 /* 会話の末尾に添える選択肢。吹き出しの続きとして左に寄せる */
-.invite-actions { display: flex; gap: 8px; margin-top: 2px; }
-.invite-actions .btn { flex: 1; min-height: 46px; margin-top: 0; }
 
 /* 判断可能性: 賭けに出る選択肢は、条件のチェックとは別扱いにする */
 .bet-out { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }

@@ -16,8 +16,6 @@ import {
   addUserTurn,
   emptyBrainstorm,
   fallbackPrompt,
-  inviteText,
-  shouldInvite,
   transcript,
   type BrainstormState,
 } from "@/lib/brainstorm";
@@ -33,14 +31,9 @@ export default function JournalPage() {
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
   const [added, setAdded] = useState<Record<string, string>>({});
-  // 「決めにいきますか」を最後に尋ねた時点の発言数。続けて何度も尋ねないために覚えておく
-  const [askedAt, setAskedAt] = useState<number | null>(null);
-  // 「決めにいきますか」を出した直後。会話の末尾に選択肢を添える
-  const [inviting, setInviting] = useState(false);
   // AIが応答できなかった直後。会話のふりをせず、そう伝える
   const [silent, setSilent] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-  const saidCount = state.turns.filter((t) => t.from === "USER").length;
   const savedRef = useRef<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +72,6 @@ export default function JournalPage() {
     const text = said.trim();
     if (!text || thinking) return;
     setDraft("");
-    setInviting(false);
     setSilent(false);
     const withUser = addUserTurn(state.turns.length === 0 ? emptyBrainstorm() : state, text);
     setState(withUser);
@@ -93,16 +85,10 @@ export default function JournalPage() {
       const candidates = await assistExtract(body);
       setExtra(candidates);
 
-      // 話が落ち着いたら、会話の中で決めにいくかを尋ねる。
-      // ここで問いを返さないと会話が終わり、本人はそのまま離れてしまう
-      const list = candidates.length > 0 ? candidates : withUser.candidates;
-      if (list.length > 0 && shouldInvite(withUser, askedAt)) {
-        setState((s) => addAppTurn(s, inviteText(list)));
-        // 尋ねたことを覚える。返事がどうであれ、続けて何度も聞かない
-        setAskedAt(withUser.turns.filter((t) => t.from === "USER").length);
-        setInviting(true);
-        return;
-      }
+      // 決めにいくかは、こちらから尋ねない。
+      // 数往復で「これを決めにいきますか?」と出すのは、話している最中に
+      // 決断を要求することになる。決めるのは本人(INV-05)。
+      // 決断として立てたくなったら、下の候補一覧からいつでも立てられる。
 
       // それ以外はAIが会話を進める。
       // 返らなかったら黙って定型文を出すのではなく、答えられないことを出す
@@ -144,28 +130,6 @@ export default function JournalPage() {
         {silent && !thinking && (
           <div className="bubble q note">
             いま応答できませんでした。書いたものは保存されています。続けて書いても構いません。
-          </div>
-        )}
-        {inviting && !thinking && (
-          <div className="invite-actions">
-            <button
-              className="btn primary"
-              onClick={() => {
-                setInviting(false);
-                listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              決めにいく
-            </button>
-            <button
-              className="btn"
-              onClick={() => {
-                setInviting(false);
-                setAskedAt(saidCount);
-              }}
-            >
-              まだ話す
-            </button>
           </div>
         )}
       </div>
