@@ -28,7 +28,8 @@ export async function GET(request: Request) {
 
   // ?probe=1 で実際に1回呼ぶ。設定だけ合っていて実は返ってこない、を見分ける。
   // 課金が発生するので回数制限をかける
-  if (new URL(request.url).searchParams.get("probe") !== "1") {
+  const probe = new URL(request.url).searchParams.get("probe");
+  if (probe !== "1" && probe !== "chat") {
     return NextResponse.json(config);
   }
   if (!provider) return NextResponse.json({ ...config, probe: { ok: false, error: "APIキーが未設定です" } });
@@ -38,6 +39,25 @@ export async function GET(request: Request) {
   }
 
   const started = Date.now();
+  // ?probe=chat で、指示なしの会話経路を1往復ためす。返ってきた文字列をそのまま返す
+  if (new URL(request.url).searchParams.get("probe") === "chat") {
+    try {
+      const r = await callChat({
+        kind: "chat",
+        messages: [{ role: "user", content: "出資を受けるかどうか迷っています" }],
+        maxTokens: 400,
+      });
+      return NextResponse.json({
+        ...config,
+        probe: { ok: true, model: r.model, ms: Date.now() - started, usage: r.usage, text: r.text },
+      });
+    } catch (e) {
+      return NextResponse.json({
+        ...config,
+        probe: { ok: false, ms: Date.now() - started, error: e instanceof Error ? e.message : String(e) },
+      });
+    }
+  }
   try {
     const r = await callModel<{ ok: boolean }>({
       kind: "cheap",

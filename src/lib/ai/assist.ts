@@ -15,10 +15,17 @@ import type { AiRequest, AiEnvelope, BrainstormResult, ExtractResult, ReplyResul
 /** AIを待つ上限。これを超えたらルールの結果で進む */
 const TIMEOUT_MS = 8000;
 
-let aiDisabled = false;
+/**
+ * 502が返ったあと、しばらくAIを呼ばない時刻。
+ *
+ * 以前はページを開いている間ずっと諦めていた。設定漏れなら正しいが、
+ * 一時的な失敗のときも復帰せず、以降ずっと定型文だけの会話になっていた。
+ */
+let quietUntil = 0;
+const QUIET_MS = 60_000;
 
 async function post<T>(body: AiRequest): Promise<T | null> {
-  if (aiDisabled || !isAiEnabled()) return null;
+  if (Date.now() < quietUntil || !isAiEnabled()) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -29,8 +36,8 @@ async function post<T>(body: AiRequest): Promise<T | null> {
       signal: controller.signal,
     });
     // 混みすぎ(429)は一時的なので、次の発言では普通に呼ぶ。
-    // 設定漏れ(502)だけは繰り返しても直らないので、その画面では以降呼ばない
-    if (res.status === 502) aiDisabled = true;
+    // 502は続けて叩いても直りにくいので少し休むが、諦めはしない
+    if (res.status === 502) quietUntil = Date.now() + QUIET_MS;
     if (res.status === 429 || res.status === 403) return null;
     const env = (await res.json()) as AiEnvelope<T>;
     return env.ok ? env.result : null;
@@ -87,25 +94,29 @@ export async function assistSplit(
 /**
  * 書き出しの会話。ここはAIに任せる ── 台本どおりに問いを並べると、
  * 本人が話したいことから引き剥がしてしまうため。
- * 返らなければ定型文を使うので、AIが無くても会話は続く。
+ *
+ * 返らなかったときは null を返す。定型文で代役を立てない。
+ * 代役は本人の発言と無関係な問いを並べるので、会話が支離滅裂になる。
+ * 実際に「他にも引っかかっていることは?」→「返事を保留しているものは?」と続けて、
+ * 本人から「なんの話?」と返ってきた。答えられないなら、答えられないと出す。
  */
 export async function assistBrainstorm(
   state: BrainstormState,
   fallback: Prompt,
   said: string
-): Promise<string> {
+): Promise<string | null> {
   const ai = await post<BrainstormResult>({
     task: "brainstorm",
     turns: state.turns,
     fallback: fallback.text,
   });
   const text = ai?.text?.trim();
-  if (!text) return fallback.text;
+  if (!text) return null;
 
   // 画面が壊れるものだけ差し戻す。文体の崩れは記録に留める ──
   // 差し戻すと会話が切れて定型文に落ち、かえって不自然になるため
   const lastApp = [...state.turns].reverse().find((t) => t.from === "APP")?.text;
   const issue = checkReply(text, said, lastApp);
   if (issue) console.warn("[ai] 応答の崩れ", issue.code, issue.detail);
-  return shouldReject(issue) ? fallback.text : text;
+  return shouldReject(issue) ? null : text;
 }

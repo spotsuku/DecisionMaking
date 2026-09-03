@@ -37,6 +37,8 @@ export default function JournalPage() {
   const [askedAt, setAskedAt] = useState<number | null>(null);
   // 「決めにいきますか」を出した直後。会話の末尾に選択肢を添える
   const [inviting, setInviting] = useState(false);
+  // AIが応答できなかった直後。会話のふりをせず、そう伝える
+  const [silent, setSilent] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const saidCount = state.turns.filter((t) => t.from === "USER").length;
   const savedRef = useRef<string | null>(null);
@@ -78,6 +80,7 @@ export default function JournalPage() {
     if (!text || thinking) return;
     setDraft("");
     setInviting(false);
+    setSilent(false);
     const withUser = addUserTurn(state.turns.length === 0 ? emptyBrainstorm() : state, text);
     setState(withUser);
     setThinking(true);
@@ -101,11 +104,11 @@ export default function JournalPage() {
         return;
       }
 
-      // それ以外はAIが会話を進める。ルールはAIが使えないときの代役
-      const fallback = fallbackPrompt(withUser);
-      const reply = await assistBrainstorm(withUser, fallback, text);
-      // 代役の問いを実際に出したときだけ、既出として記録する
-      setState((s) => addAppTurn(s, reply, reply === fallback.text ? fallback.key : undefined));
+      // それ以外はAIが会話を進める。
+      // 返らなかったら黙って定型文を出すのではなく、答えられないことを出す
+      const reply = await assistBrainstorm(withUser, fallbackPrompt(withUser), text);
+      if (reply) setState((s) => addAppTurn(s, reply));
+      else setSilent(true);
     } finally {
       setThinking(false);
     }
@@ -138,6 +141,11 @@ export default function JournalPage() {
           )
         )}
         {thinking && <div className="bubble q note">…</div>}
+        {silent && !thinking && (
+          <div className="bubble q note">
+            いま応答できませんでした。書いたものは保存されています。続けて書いても構いません。
+          </div>
+        )}
         {inviting && !thinking && (
           <div className="invite-actions">
             <button
