@@ -1,7 +1,7 @@
 // 書き出しからの決断候補抽出のテスト
 
 import { describe, it, expect } from "vitest";
-import { extractCandidates, candidateTitle } from "../src/lib/journal";
+import { extractCandidates, candidateTitle, toDecisionShape } from "../src/lib/journal";
 
 const texts = (text: string) => extractCandidates(text).map((c) => c.text);
 const kindOf = (text: string, needle: string) =>
@@ -65,7 +65,8 @@ describe("設計書1.1が挙げる回避表現を兆候として拾う", () => {
     expect(found.some((s) => s.includes("ずるずる"))).toBe(true);
     expect(found.some((s) => s.includes("まだ取ってない"))).toBe(true);
     expect(found.some((s) => s.includes("後回し"))).toBe(true);
-    expect(found.some((s) => s.includes("決めてない"))).toBe(true);
+    // 「誰も決めてない」の報告部分は落として、決めることの形にする
+    expect(found.some((s) => s.includes("オフィスの移転"))).toBe(true);
   });
 });
 
@@ -95,5 +96,34 @@ describe("candidateTitle", () => {
     const long = "とても長い候補文で、これは間違いなく三十文字を超えるはずの文章になっています";
     expect(candidateTitle(long).length).toBeLessThanOrEqual(30);
     expect(candidateTitle("短い候補")).toBe("短い候補");
+  });
+});
+
+describe("迷いの報告を、決めることの形に直す", () => {
+  it("末尾の「迷ってます」「悩んでいる」を落とす", () => {
+    expect(toDecisionShape("北海道の経営者に出資してもらうかどうか迷ってます")).toBe(
+      "北海道の経営者に出資してもらうかどうか"
+    );
+    expect(toDecisionShape("北海道の経営者から出資を受けるかどうか、ずっと悩んでいる")).toBe(
+      "北海道の経営者から出資を受けるかどうか"
+    );
+    expect(toDecisionShape("オフィスを移転するかどうか検討しています")).toBe("オフィスを移転するかどうか");
+    expect(toDecisionShape("犬を飼うかどうか決めきれない")).toBe("犬を飼うかどうか");
+  });
+
+  it("落とすと意味が消えるものは、そのまま残す", () => {
+    // 幹が短すぎる場合。読めない候補を出すより、元の文の方がよい
+    expect(toDecisionShape("迷ってます")).toBe("迷ってます");
+  });
+
+  it("本人の言葉は書き換えない。切るだけ", () => {
+    const src = "増田石油さんに出資のリマインドをするかどうか迷ってる";
+    expect(src).toContain(toDecisionShape(src));
+  });
+
+  it("候補として取り出す時点で、この形になっている", () => {
+    expect(extractCandidates("北海道の経営者に出資してもらうかどうか迷ってます").map((c) => c.text)).toEqual([
+      "北海道の経営者に出資してもらうかどうか",
+    ]);
   });
 });

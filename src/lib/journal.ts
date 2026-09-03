@@ -102,6 +102,26 @@ function toSentences(text: string): string[] {
 }
 
 /**
+ * 迷いの報告部分を落として、決めることの形にする。
+ *
+ * 「北海道の経営者に出資してもらうかどうか迷ってます」をそのまま候補にすると、
+ * 「これを決めにいきますか?」と出したときに、迷っている状態を決断として
+ * 差し出す形になる。決めるのは「出資してもらうかどうか」であって、
+ * 「迷っていること」ではない。
+ *
+ * 本人の言葉は書き換えない。末尾の報告部分を切るだけ。
+ */
+const HESITATION_TAIL =
+  /(?:[、,\s]*(?:で|を|が|は|に|、)?\s*)?(?:ずっと|まだ|正直|少し|かなり|ちょっと)?\s*(?:迷って(?:います|いる|ます|る|いて|て)?|悩んで(?:います|いる|ます|る|いて|て)?|決め(?:きれない|られない|かねて(?:います|いる)?|てない|ていない)|検討(?:して(?:います|いる|ます|る)?|中)|考えて(?:います|いる|ます|る)?|どうしよう(?:か|かな)?)[。.！!]*$/;
+
+export function toDecisionShape(text: string): string {
+  const t = text.trim().replace(/[。.]+$/, "");
+  const cut = t.replace(HESITATION_TAIL, "").trim().replace(/[、,]$/, "");
+  // 切った結果が短すぎるなら、元の文のままにする(意味が消えるより読める方がよい)
+  return cut.length >= MIN_LEN ? cut : t;
+}
+
+/**
  * 自由記述から決断候補を抽出する。
  * 問いの形(最大5件)を先に、停滞の兆候(最大3件)を後に返す。
  */
@@ -114,7 +134,7 @@ export function extractCandidates(text: string): Candidate[] {
     if (seen.has(sentence)) continue;
     if (QUESTION_PATTERNS.some((p) => p.test(sentence))) {
       seen.add(sentence);
-      questions.push({ text: sentence, kind: "QUESTION" });
+      questions.push({ text: toDecisionShape(sentence), kind: "QUESTION" });
     } else if (SIGNAL_PATTERNS.some((p) => p.test(sentence))) {
       seen.add(sentence);
       signals.push({ text: sentence, kind: "SIGNAL" });

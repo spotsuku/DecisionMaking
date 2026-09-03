@@ -164,14 +164,27 @@ export function inviteText(candidates: Candidate[]): string {
   const head = candidates[0]?.text ?? "";
   const short = head.length <= 28 ? head : `${head.slice(0, 27)}…`;
   if (candidates.length === 1) {
-    return `ここまでで、決めていないことが1つ見えました。「${short}」。これを決めにいきますか?`;
+    return `「${short}」は、そろそろ決めにいきますか? まだ話していても構いません。`;
   }
-  return `ここまでで、決めていないことが${candidates.length}つ見えました。どれか1つ、決めにいきますか?`;
+  return `話に出ている${candidates.length}つのうち、どれか1つを決めにいきますか? まだ話していても構いません。`;
 }
 
 /** 直前の発言 */
 function lastSaid(state: BrainstormState): string {
   return [...state.turns].reverse().find((t) => t.from === "USER")?.text ?? "";
+}
+
+/**
+ * 話が細くなってきたか。
+ *
+ * 直近の発言が短くなっていれば、出す材料が尽きてきたと見る。
+ * 長い発言が続いているうちは、まだ話したいことがある。
+ */
+function isWindingDown(state: BrainstormState): boolean {
+  const said = state.turns.filter((t) => t.from === "USER").map((t) => t.text.length);
+  if (said.length < 3) return false;
+  const recent = said.slice(-2);
+  return recent.every((n) => n <= 20);
 }
 
 /** 直近 n 往復で、新しい決めごとが1つも出ていないか */
@@ -181,8 +194,17 @@ function noNewCandidates(state: BrainstormState, n: number): boolean {
   return c[c.length - 1] === c[c.length - 1 - n];
 }
 
-/** 誘う前に、最低これだけは話してもらう */
-const MIN_TURNS = 3;
+/**
+ * 誘う前に、最低これだけは話してもらう。
+ *
+ * 3往復では早すぎた。1つの決断を掘り始めたところで「決めにいきますか?」と
+ * 出てしまい、話を切られる。決断を促すのはこちらの都合であって、
+ * 本人はまだ材料を出している途中のことが多い。
+ */
+const MIN_TURNS = 4;
+
+/** 本人が止まっていない(まだ話している)ときに誘うなら、これだけ往復してから */
+const SETTLED_TURNS = 8;
 /** 一度断られたら、これだけ往復するまで黙る */
 const QUIET_TURNS = 3;
 
@@ -206,7 +228,12 @@ export function shouldInvite(state: BrainstormState, dismissedAtTurn: number | n
   if (said < MIN_TURNS) return false;
   if (dismissedAtTurn !== null && said < dismissedAtTurn + QUIET_TURNS) return false;
 
+  // 「特にない」で止まったら、出しきったサイン。ここは往復数に関わらず誘ってよい
   if (isNonAnswer(lastSaid(state))) return true;
-  return noNewCandidates(state, 2);
+
+  // 新しい決めごとが出ていない = 落ち着いた、とは限らない。
+  // 1つの決断を掘っている最中も候補は増えないので、それだけでは遮る理由にならない。
+  // 本人の発言が短くなってきて、かつ長く話したあとに限る
+  return noNewCandidates(state, 3) && said >= SETTLED_TURNS && isWindingDown(state);
 }
 
