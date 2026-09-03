@@ -4,9 +4,10 @@
 // 失敗したらエラーを返し、呼び出し側はルールベースの結果で続行する。
 
 import { NextResponse } from "next/server";
-import { activeProvider, callModel, modelFor } from "@/lib/ai/provider";
+import { activeProvider, callChat, callModel, modelFor } from "@/lib/ai/provider";
+import { toChatMessages } from "@/lib/ai/chat";
 import { rateLimit, sameOrigin } from "@/lib/ai/guard";
-import { brainstormPrompt, extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
+import { extractPrompt, replyPrompt, splitPrompt } from "@/lib/ai/prompts";
 import type { AiRequest, BrainstormResult, ExtractResult, ReplyResult, SplitResult } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -105,9 +106,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
     }
     if (body.task === "brainstorm") {
-      const { system, user } = brainstormPrompt(body);
-      const r = await callModel<BrainstormResult>({ kind: "chat", system, user, maxTokens: 300 });
-      return NextResponse.json({ ok: true, result: r.result, usage: r.usage });
+      // 指示は付けない。やりとりだけを渡して、素の応答を返す
+      const r = await callChat({ kind: "chat", messages: toChatMessages(body.turns), maxTokens: 400 });
+      const result: BrainstormResult = { text: r.text };
+      return NextResponse.json({ ok: true, result, usage: r.usage });
     }
     if (body.task === "split") {
       const { system, user } = splitPrompt(body);

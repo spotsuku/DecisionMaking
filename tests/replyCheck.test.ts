@@ -31,7 +31,9 @@ describe("実際に出た崩れた返しを記録する", () => {
   });
 
   it("長すぎる返しを弾く", () => {
-    expect(checkReply("あ".repeat(120), "短い発言")?.code).toBe("TOO_LONG");
+    // 指示を渡さなくなったぶん、ふつうの返事は通す。壊れている長さだけ弾く
+    expect(checkReply("あ".repeat(120), "短い発言")).toBeNull();
+    expect(checkReply("あ".repeat(420), "短い発言")?.code).toBe("TOO_LONG");
   });
 
   it("空の返しを弾く", () => {
@@ -69,7 +71,8 @@ describe("自然な返しは通す", () => {
 describe("差し戻すのは、画面が壊れるものだけ", () => {
   it("空と長すぎは差し戻す", () => {
     expect(shouldReject(checkReply("", "発言"))).toBe(true);
-    expect(shouldReject(checkReply("あ".repeat(120), "発言"))).toBe(true);
+    expect(shouldReject(checkReply("あ".repeat(420), "発言"))).toBe(true);
+    expect(shouldReject(checkReply("あ".repeat(120), "発言"))).toBe(false);
   });
 
   it("文体の崩れは記録するが、差し戻さない", () => {

@@ -119,3 +119,78 @@ export async function callModel<T>(opts: {
   const args = { ...opts, model: modelFor(opts.kind) };
   return provider === "openai" ? callOpenAI<T>(args) : callAnthropic<T>(args);
 }
+
+/** 会話の1往復。role はそのままAPIへ渡す */
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+async function chatOpenAI(o: { model: string; messages: ChatTurn[]; maxTokens: number; signal?: AbortSignal }) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    // system も response_format も付けない。会話だけを渡す
+    body: JSON.stringify({ model: o.model, max_completion_tokens: o.maxTokens, messages: o.messages }),
+    signal: o.signal,
+  });
+  if (!res.ok) throw new Error(`openai ${res.status}`);
+  const body = (await res.json()) as {
+    choices: { message: { content: string | null } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  };
+  return {
+    text: (body.choices[0]?.message?.content ?? "").trim(),
+    usage: {
+      inputTokens: body.usage?.prompt_tokens ?? 0,
+      outputTokens: body.usage?.completion_tokens ?? 0,
+    },
+    model: o.model,
+  };
+}
+
+async function chatAnthropic(o: { model: string; messages: ChatTurn[]; maxTokens: number; signal?: AbortSignal }) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
+      "anthropic-version": "2023-06-01",
+    },
+    // system は付けない
+    body: JSON.stringify({ model: o.model, max_tokens: o.maxTokens, messages: o.messages }),
+    signal: o.signal,
+  });
+  if (!res.ok) throw new Error(`anthropic ${res.status}`);
+  const body = (await res.json()) as {
+    content: { type: string; text?: string }[];
+    usage: { input_tokens: number; output_tokens: number };
+  };
+  return {
+    text: body.content.filter((c) => c.type === "text").map((c) => c.text ?? "").join("").trim(),
+    usage: { inputTokens: body.usage.input_tokens, outputTokens: body.usage.output_tokens },
+    model: o.model,
+  };
+}
+
+/**
+ * 指示を付けない会話。
+ *
+ * system も JSON形式の指定も付けず、やりとりだけを渡して素の応答を受け取る。
+ * 書き出しの段階でこちらが役や目的を書くと、そのぶん会話が誘導される
+ * ── 実際に、型の反復とカウンセリング化を2度招いた。
+ */
+export async function callChat(opts: {
+  kind: "cheap" | "chat";
+  messages: ChatTurn[];
+  maxTokens: number;
+  signal?: AbortSignal;
+}): Promise<{ text: string; usage: { inputTokens: number; outputTokens: number }; model: string }> {
+  const provider = activeProvider();
+  if (!provider) throw new Error("APIキーが設定されていません");
+  const args = { model: modelFor(opts.kind), messages: opts.messages, maxTokens: opts.maxTokens, signal: opts.signal };
+  return provider === "openai" ? chatOpenAI(args) : chatAnthropic(args);
+}

@@ -3,7 +3,8 @@
 
 import { describe, it, expect } from "vitest";
 import { mergeCandidates, mergeSplit } from "../src/lib/ai/merge";
-import { brainstormPrompt } from "../src/lib/ai/prompts";
+import * as prompts from "../src/lib/ai/prompts";
+import { toChatMessages } from "../src/lib/ai/chat";
 import type { Candidate } from "../src/lib/journal";
 
 const rule = (text: string, kind: Candidate["kind"] = "QUESTION"): Candidate => ({ text, kind });
@@ -60,26 +61,37 @@ describe("欄への振り分けの合流(作文を通さない)", () => {
   });
 });
 
-describe("書き出しのプロンプト", () => {
-  const { system } = brainstormPrompt({ task: "brainstorm", turns: [{ from: "USER", text: "出資を受けるかどうか" }], fallback: "" });
-
-  it("決めるための材料を渡す。渡さないと気持ちや経緯を掘りに行く", () => {
-    expect(system).toMatch(/いつまでに決めなければいけない/);
-    expect(system).toMatch(/選べる案/);
-    expect(system).toMatch(/何が分かれば決められる/);
+describe("書き出しの会話に指示を付けない", () => {
+  it("プロンプトを持たない(会話そのものだけを渡す)", () => {
+    // 指示を書くほど会話が誘導される。役だけ与えたらカウンセリングの型に流れ、
+    // 形を指定したら同じ型を繰り返した。ここに関数が復活したら、それは後退
+    expect("brainstormPrompt" in prompts).toBe(false);
   });
 
-  it("経緯や気持ちを掘らせない", () => {
-    expect(system).toMatch(/経緯そのものを掘らない/);
+  it("本人=user、アプリ=assistant で、やりとりの順序をそのまま渡す", () => {
+    expect(
+      toChatMessages([
+        { from: "USER", text: "出資を受けるかどうか" },
+        { from: "APP", text: "いつまでに決めますか?" },
+        { from: "USER", text: "今月末まで" },
+      ])
+    ).toEqual([
+      { role: "user", content: "出資を受けるかどうか" },
+      { role: "assistant", content: "いつまでに決めますか?" },
+      { role: "user", content: "今月末まで" },
+    ]);
   });
 
-  it("決めるのは本人。助言はさせない", () => {
-    expect(system).toMatch(/助言/);
-    expect(system).toMatch(/決めるのは本人/);
+  it("先頭のアプリ側の呼びかけは落とす(APIはuserから始まる必要がある)", () => {
+    const m = toChatMessages([
+      { from: "APP", text: "いま頭にあることを、そのまま話してみてください。" },
+      { from: "USER", text: "出資を受けるかどうか" },
+    ]);
+    expect(m).toHaveLength(1);
+    expect(m[0]).toEqual({ role: "user", content: "出資を受けるかどうか" });
   });
 
-  it("文の形は指定しない(型を繰り返す原因になる)", () => {
-    expect(system).not.toMatch(/受け止めてから/);
-    expect(system).not.toMatch(/問いで終える/);
+  it("空の発言は渡さない", () => {
+    expect(toChatMessages([{ from: "USER", text: "  " }])).toEqual([]);
   });
 });
