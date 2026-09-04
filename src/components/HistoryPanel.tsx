@@ -5,6 +5,7 @@
 import { useDB, fmtDate, fmtDateTime } from "@/lib/useDB";
 import type { Decision } from "@/lib/types";
 import { STATE_LABEL } from "@/lib/types";
+import { displayLabel } from "@/lib/options";
 
 export function HistoryPanel({ decision }: { decision: Decision }) {
   const db = useDB();
@@ -47,7 +48,7 @@ export function HistoryPanel({ decision }: { decision: Decision }) {
                   <div>旧結果の受容: {change.priorResultAcknowledged ? "済み" : "未"}</div>
                 </div>
               )}
-              {selected && <div className="card-meta">選択: {selected.label}</div>}
+              {selected && <div className="card-meta">選択: {displayLabel(selected.label)}</div>}
               {pos && <div className="card-meta">▲ {pos.outcomeStatement}</div>}
               {neg && <div className="card-meta" style={{ color: "var(--accent-dark)" }}>▼ {neg.outcomeStatement}</div>}
               {outcome && (

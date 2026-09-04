@@ -1,26 +1,29 @@
 "use client";
 
-// Decision Workspace(8章): 判断基準(S4)・選択肢(S5)・証拠(S6)。
-// 事実/仮説/意見を分離し、基準なしの選択肢拡張・情報収集の逃避を検知する。
+// Decision Workspace(8章): 判断基準(S4)と証拠(S6)。
+// 事実/仮説/意見を分離し、情報収集の逃避を検知する。
+//
+// 選択肢(S5)と比較はここから外した ── /decisions/[id]/options に移した。
+// 同じものを2画面で足せると、どちらが本物か分からなくなる。
 
 import { useState } from "react";
 import { useDB } from "@/lib/useDB";
 import { store } from "@/lib/store";
-import { detectGatheringEscape, detectOptionExpansion } from "@/lib/diagnosis";
+import { useRouter } from "next/navigation";
+import { detectGatheringEscape } from "@/lib/diagnosis";
 import { buildProposals, type Proposal } from "@/lib/proposals";
 import type { Decision, DecisionVersion, EvidenceItem } from "@/lib/types";
+import { displayLabel } from "@/lib/options";
 
 export function Workspace({ decision, version }: { decision: Decision; version: DecisionVersion }) {
   const db = useDB();
+  const router = useRouter();
   const locked = !!version.committedAt;
   const criteria = db.criteria.filter((c) => c.versionId === version.id);
   const options = db.options.filter((o) => o.versionId === version.id);
-  const activeOptions = options.filter((o) => o.active);
   const evidence = db.evidence.filter((e) => e.versionId === version.id);
-  const scores = db.optionScores;
 
   const gatherWarn = detectGatheringEscape(db, version.id);
-  const expandWarn = detectOptionExpansion(db, version.id);
 
   // 判断基準フォーム
   const [cLabel, setCLabel] = useState("");
@@ -28,11 +31,6 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
   const [cWeight, setCWeight] = useState(3);
   const [cMin, setCMin] = useState("");
   const [err, setErr] = useState<string | null>(null);
-
-  // 選択肢フォーム
-  const [oLabel, setOLabel] = useState("");
-  const [oDesc, setODesc] = useState("");
-  const [oReason, setOReason] = useState("");
 
   // 証拠フォーム
   const [eType, setEType] = useState<EvidenceItem["type"]>("FACT");
@@ -44,7 +42,6 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
   const acceptProposal = (p: Proposal) =>
     guard(() => {
       if (p.kind === "CRITERION") store.addCriterion(version.id, p.label, "", 3, "");
-      else if (p.kind === "OPTION") store.addOption(version.id, p.label, "", "診断の回答から");
       else store.addEvidence(version.id, p.evidenceType ?? "HYPOTHESIS", p.label, "MEDIUM", null);
     });
 
@@ -80,7 +77,6 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
         <div className="callout neutral">このversionは確定済みです。材料は閲覧のみできます。</div>
       )}
       {gatherWarn && <div className="callout">{gatherWarn}</div>}
-      {expandWarn && <div className="callout">{expandWarn}</div>}
       {err && <div className="callout">{err}</div>}
 
       <h2 className="section">判断基準(3〜5個)</h2>
@@ -132,114 +128,30 @@ export function Workspace({ decision, version }: { decision: Decision; version: 
         </div>
       )}
 
-      <h2 className="section">選択肢(2〜4個)</h2>
+      <h2 className="section">選択肢</h2>
       <p className="card-meta" style={{ marginTop: -6, lineHeight: 1.8 }}>
-        実際に選べる案を並べます。「やる / 見送る」の2つでも立派な選択肢です。
-        比べる相手がないと、決めたことにならないので、最低2つ置きます。
+        案を出す・削る・選ぶは、専用の画面で行います。ここでは今ある案だけを表示します。
       </p>
-      <Proposals kind="OPTION" />
-      {activeOptions.length >= 5 && (
-        <div className="callout">選択肢が5件以上あります。基準で比較し、絞り込みましょう。</div>
-      )}
-      {options.map((o) => (
-        <div key={o.id} className="card flat" style={{ opacity: o.active ? 1 : 0.55 }}>
-          <div className="card-row">
-            <span className="card-title" style={{ fontSize: 14.5 }}>{o.label}</span>
-            {!o.active && <span className="badge soft">除外</span>}
-            {version.selectedOptionId === o.id && <span className="badge accent">選択</span>}
-            {!locked && o.active && (
-              <button className="btn ghost small" style={{ marginLeft: "auto" }}
-                onClick={() => {
-                  const reason = window.prompt("この案を外す理由(却下理由として履歴に残ります)");
-                  if (reason !== null) guard(() => store.deactivateOption(o.id, reason));
-                }}>
-                除外
-              </button>
+      {options.length === 0 ? (
+        <div className="empty">まだ案がありません。</div>
+      ) : (
+        options.map((o) => (
+          <div key={o.id} className="card flat" style={{ opacity: o.active ? 1 : 0.55 }}>
+            <div className="card-row">
+              <span className="card-title" style={{ fontSize: 14.5 }}>{displayLabel(o.label)}</span>
+              {!o.active && <span className="badge soft">除外</span>}
+              {version.selectedOptionId === o.id && <span className="badge accent">選択</span>}
+            </div>
+            {o.description && <div className="card-meta">{o.description}</div>}
+            {o.rejectedReason && (
+              <div className="card-meta" style={{ color: "var(--accent-dark)" }}>外した理由: {o.rejectedReason}</div>
             )}
           </div>
-          {o.description && <div className="card-meta">{o.description}</div>}
-          {o.addedReason && <div className="card-meta">追加理由: {o.addedReason}</div>}
-          {o.rejectedReason && <div className="card-meta" style={{ color: "var(--accent-dark)" }}>却下理由: {o.rejectedReason}</div>}
-        </div>
-      ))}
-      {!locked && (
-        <div className="card">
-          <div className="form-grid">
-            <div className="field">
-              <label>選択肢<span className="req">*</span></label>
-              <input type="text" value={oLabel} onChange={(e) => setOLabel(e.target.value)} placeholder="例: 迎える / 見送る" />
-            </div>
-            <div className="field">
-              <label>説明</label>
-              <input type="text" value={oDesc} onChange={(e) => setODesc(e.target.value)} />
-            </div>
-          </div>
-          {activeOptions.length >= 4 && (
-            <div className="field">
-              <label>追加理由(新しい事実)<span className="req">*</span></label>
-              <input type="text" value={oReason} onChange={(e) => setOReason(e.target.value)}
-                placeholder="5件目以降は、比較基準を変える新事実が必要です" />
-            </div>
-          )}
-          <button className="btn small" disabled={!oLabel.trim()}
-            onClick={() => guard(() => { store.addOption(version.id, oLabel.trim(), oDesc, oReason); setOLabel(""); setODesc(""); setOReason(""); })}>
-            選択肢を追加
-          </button>
-        </div>
+        ))
       )}
-
-      {activeOptions.length > 0 && criteria.length > 0 && (
-        <>
-          <h2 className="section">比較(選択肢 × 基準)</h2>
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>選択肢</th>
-                  {criteria.map((c) => (
-                    <th key={c.id}>{c.label}<br /><span style={{ fontWeight: 400 }}>重み{c.weight}</span></th>
-                  ))}
-                  <th>加重計</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeOptions.map((o) => {
-                  let total = 0;
-                  return (
-                    <tr key={o.id}>
-                      <td style={{ fontWeight: 600 }}>{o.label}</td>
-                      {criteria.map((c) => {
-                        const s = scores.find((x) => x.optionId === o.id && x.criterionId === c.id);
-                        total += (s?.score ?? 0) * c.weight;
-                        return (
-                          <td key={c.id}>
-                            {locked ? (
-                              s?.score ?? "—"
-                            ) : (
-                              <select
-                                value={s?.score ?? ""}
-                                onChange={(e) => store.setScore(o.id, c.id, Number(e.target.value), "")}
-                                style={{ width: 64 }}
-                              >
-                                <option value="">—</option>
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <option key={n} value={n}>{n}</option>
-                                ))}
-                              </select>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td style={{ fontWeight: 700 }}>{total || "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="card-meta">スコアは整理のための道具です。合計点が高い案を選ぶ義務はありません。最終選択はあなたが確定します。</p>
-        </>
-      )}
+      <button className="btn outline" onClick={() => router.push(`/decisions/${decision.id}/options`)}>
+        選択肢の画面へ
+      </button>
 
       <h2 className="section">証拠(事実・仮説・意見を分ける)</h2>
       <p className="card-meta" style={{ marginTop: -6, lineHeight: 1.8 }}>

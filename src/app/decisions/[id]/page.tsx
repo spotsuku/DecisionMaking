@@ -53,12 +53,13 @@ export default function DecisionHubPage() {
     if (readiness.verdict !== "THINK" && readiness.verdict !== "BET") {
       return { label: "次に確かめる", href: `${base}/materials` };
     }
-    return { label: "選択肢を整理する", href: `${base}/materials` };
+    return { label: "選択肢を絞る", href: `${base}/options` };
   })();
 
   const menu: { label: string; href: string; show: boolean }[] = [
     { label: "診断の記録", href: `/decisions/${decision.id}/diagnose`, show: true },
-    { label: "材料(基準・選択肢・証拠)", href: `/decisions/${decision.id}/materials`, show: true },
+    { label: "選択肢(出す・削る・選ぶ)", href: `/decisions/${decision.id}/options`, show: true },
+    { label: "材料(基準・証拠)", href: `/decisions/${decision.id}/materials`, show: true },
     { label: "決断の確定", href: `/decisions/${decision.id}/commit`, show: !committed },
     { label: "Decision Card", href: `/decisions/${decision.id}/card`, show: committed },
     { label: "実行の記録", href: `/decisions/${decision.id}/actions`, show: committed },

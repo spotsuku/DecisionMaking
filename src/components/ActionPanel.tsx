@@ -7,6 +7,7 @@ import { useDB, fmtDate, fmtDateTime, isOverdue } from "@/lib/useDB";
 import { store } from "@/lib/store";
 import { detectDrift } from "@/lib/drift";
 import type { ActionRole, Decision, DecisionVersion } from "@/lib/types";
+import { displayLabel } from "@/lib/options";
 import { DateField } from "@/components/DateField";
 
 const ROLE_LABEL: Record<ActionRole, string> = {
@@ -62,7 +63,7 @@ export function ActionPanel({ decision, version }: { decision: Decision; version
             </div>
             <div className="card-meta" style={{ marginTop: 4 }}>
               期限 {fmtDate(a.dueAt)}{overdue && " ・ 期限超過"}
-              {opt && <> ・ 向かう案: {opt.label}</>}
+              {opt && <> ・ 向かう案: {displayLabel(opt.label)}</>}
               {a.completionEvidence && <> ・ 完了証拠: {a.completionEvidence}</>}
             </div>
             {a.status !== "COMPLETED" && a.status !== "CANCELLED" && (
@@ -123,7 +124,7 @@ export function ActionPanel({ decision, version }: { decision: Decision; version
               <select value={optionId} onChange={(e) => setOptionId(e.target.value)}>
                 {options.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.label}{o.id === version.selectedOptionId ? "(選択した案)" : ""}
+                    {displayLabel(o.label)}{o.id === version.selectedOptionId ? "(選択した案)" : ""}
                   </option>
                 ))}
               </select>

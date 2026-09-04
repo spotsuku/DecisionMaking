@@ -10,6 +10,7 @@ import { useDecision } from "@/lib/useDecision";
 import { store } from "@/lib/store";
 import { useAuth, needsAccount } from "@/lib/auth";
 import { evaluateCommitGate } from "@/lib/stateMachine";
+import { displayLabel } from "@/lib/options";
 import { IconBack } from "@/components/icons";
 import { DateField } from "@/components/DateField";
 
@@ -184,7 +185,7 @@ export default function CommitWizardPage() {
               <label className="check-row" style={{ padding: 0 }}>
                 <input type="radio" name="opt" checked={selectedOptionId === o.id} onChange={() => setSelectedOptionId(o.id)} />
                 <span style={{ flex: 1 }}>
-                  {o.label}
+                  {displayLabel(o.label)}
                   {o.description && <div className="card-meta" style={{ fontWeight: 400 }}>{o.description}</div>}
                 </span>
                 {selectedOptionId === o.id && <span className="badge inverse">これを選ぶ</span>}

@@ -36,6 +36,7 @@ import type {
   Reflection,
 } from "./types";
 import { emptyDB } from "./types";
+import { splitCriteriaText, type OptionMark } from "./options";
 import { classifySafety } from "./diagnosis";
 
 const STORAGE_KEY = "decision-making-db-v1";
@@ -315,7 +316,13 @@ class Store {
 
   // ------------------------------------------------------------ 材料
 
-  addOption(versionId: string, label: string, description: string, addedReason: string): OptionItem {
+  addOption(
+    versionId: string,
+    label: string,
+    description: string,
+    addedReason: string,
+    origin: OptionItem["origin"] = "USER"
+  ): OptionItem {
     this.load();
     this.assertMutableVersion(versionId);
     const active = this.db.options.filter((o) => o.versionId === versionId && o.active);
@@ -323,7 +330,7 @@ class Store {
       throw new Error("選択肢は2〜4件が推奨です。5件目の追加には理由(新しい事実)が必要です。");
     }
     const opt: OptionItem = {
-      id: uid(), versionId, label, description, origin: "USER", active: true,
+      id: uid(), versionId, label, description, origin, active: true,
       addedReason, rejectedReason: null, createdAt: now(),
     };
     this.db.options.push(opt);
@@ -352,6 +359,31 @@ class Store {
     this.persist();
   }
 
+  /** 案の文を書き直す。型から起こした「(内容を記入)」を本人の言葉に置き換えるため */
+  renameOption(optionId: string, label: string) {
+    this.load();
+    const o = this.db.options.find((x) => x.id === optionId);
+    if (!o) return;
+    this.assertMutableVersion(o.versionId);
+    const next = label.trim();
+    if (next === "" || next === o.label) return;
+    o.label = next;
+    this.audit("option", optionId, "RENAMED", next);
+    this.persist();
+  }
+
+  /** 外した案を戻す。外した理由は消す ── 残っていると Decision Card に矛盾が出る */
+  reactivateOption(optionId: string) {
+    this.load();
+    const o = this.db.options.find((x) => x.id === optionId);
+    if (!o) return;
+    this.assertMutableVersion(o.versionId);
+    o.active = true;
+    o.rejectedReason = null;
+    this.audit("option", optionId, "REACTIVATED", o.label);
+    this.persist();
+  }
+
   addCriterion(versionId: string, label: string, definition: string, weight: number, minimumThreshold: string): Criterion {
     this.load();
     this.assertMutableVersion(versionId);
@@ -373,6 +405,64 @@ class Store {
     this.persist();
   }
 
+  /**
+   * 比較表のしるし。○△×と「まだ分からない」だけを持つ。
+   *
+   * 1〜5の点数は入れない ── 点数はアプリが決めている感じになるし、
+   * 本人が付けた数字が合計されて答えが出るように見えてしまう(6.1)。
+   * 保存先は既存の optionScores。score に段階、uncertainty に「分からない」を立てる。
+   */
+  setMark(optionId: string, criterionId: string, mark: OptionMark) {
+    this.load();
+    const o = this.db.options.find((x) => x.id === optionId);
+    if (o) this.assertMutableVersion(o.versionId);
+    const score = mark === "GOOD" ? 3 : mark === "MIXED" ? 2 : mark === "BAD" ? 1 : 0;
+    const uncertainty = mark === "UNKNOWN" ? 1 : 0;
+    const existing = this.db.optionScores.find((s) => s.optionId === optionId && s.criterionId === criterionId);
+    if (existing) {
+      existing.score = score;
+      existing.uncertainty = uncertainty;
+    } else {
+      this.db.optionScores.push({ id: uid(), optionId, criterionId, score, uncertainty, rationale: "" });
+    }
+    this.persist();
+  }
+
+  /**
+   * 判断基準を、チャット診断の答えから起こす。
+   *
+   * 比較表の行は「この選択で、何を守り、何を諦めますか?」の答えそのもの。
+   * ここを本人にもう一度入力させると、同じことを二度聞くことになる。
+   * すでに基準があるときは何もしない(本人が直したものを上書きしない)。
+   */
+  seedCriteriaFromDiagnosis(versionId: string): Criterion[] {
+    this.load();
+    const already = this.db.criteria.filter((c) => c.versionId === versionId);
+    if (already.length > 0) return already;
+
+    const answers = this.db.answers.filter((a) => {
+      const q = this.db.questions.find((x) => x.id === a.questionId);
+      return q?.versionId === versionId && q.questionCode === "Q_CRITERIA";
+    });
+    const out: Criterion[] = [];
+    for (const key of ["protect", "giveup"] as const) {
+      const raw = answers.map((a) => (a.answerJson?.[key] ?? "")).filter(Boolean).join("\n");
+      for (const item of splitCriteriaText(raw)) {
+        if (out.length >= 5) break;
+        out.push(
+          this.addCriterion(
+            versionId,
+            item,
+            key === "protect" ? "守りたいもの" : "諦めてもいいもの",
+            key === "protect" ? 5 : 2,
+            ""
+          )
+        );
+      }
+    }
+    return out;
+  }
+
   setScore(optionId: string, criterionId: string, score: number, rationale: string) {
     this.load();
     const o = this.db.options.find((x) => x.id === optionId);
@@ -384,6 +474,17 @@ class Store {
     } else {
       this.db.optionScores.push({ id: uid(), optionId, criterionId, score, uncertainty: 0, rationale });
     }
+    this.persist();
+  }
+
+  /** 選んだ案を記録する。確定(commit)はまだしない ── 理由と予測を書いてからになる */
+  selectOption(versionId: string, optionId: string | null) {
+    this.load();
+    this.assertMutableVersion(versionId);
+    const v = this.db.versions.find((x) => x.id === versionId);
+    if (!v) return;
+    v.selectedOptionId = optionId;
+    this.audit("version", versionId, "OPTION_SELECTED", optionId ?? "(解除)");
     this.persist();
   }
 

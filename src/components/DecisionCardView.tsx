@@ -4,6 +4,7 @@
 
 import { useDB, fmtDate } from "@/lib/useDB";
 import type { Decision, DecisionVersion } from "@/lib/types";
+import { displayLabel } from "@/lib/options";
 
 export function DecisionCardView({ decision, version }: { decision: Decision; version: DecisionVersion }) {
   const db = useDB();
@@ -43,11 +44,11 @@ export function DecisionCardView({ decision, version }: { decision: Decision; ve
           </div>
           <div className="dcard-section">
             <div className="k">選択</div>
-            <div className="v" style={{ fontWeight: 700 }}>{selected?.label}</div>
+            <div className="v" style={{ fontWeight: 700 }}>{selected ? displayLabel(selected.label) : ""}</div>
             {version.rationale && <div className="sub">{version.rationale}</div>}
             {rejected.length > 0 && (
               <div className="sub">
-                選ばなかった案: {rejected.map((o) => `${o.label}(${o.rejectedReason ?? "—"})`).join(" / ")}
+                選ばなかった案: {rejected.map((o) => `${displayLabel(o.label)}(${o.rejectedReason ?? "—"})`).join(" / ")}
               </div>
             )}
           </div>
